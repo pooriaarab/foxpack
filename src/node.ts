@@ -1,5 +1,5 @@
 // foxpack/node: the pack in a JSON file for the CLI, the MCP server and
-// Node callers. In Node, `import("foxpack")` gives this entry too, so
+// Node callers. In Node, `import("@pooriaarab/foxpack")` gives this entry too, so
 // `memoryResolver()` with no argument reads ~/.foxpack/pack.json.
 import { AsyncLocalStorage } from "node:async_hooks";
 import { randomBytes } from "node:crypto";

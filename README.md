@@ -1,7 +1,7 @@
 # foxpack
 
-[![npm version](https://img.shields.io/npm/v/foxpack)](https://www.npmjs.com/package/foxpack)
-[![Downloads/month](https://img.shields.io/npm/dm/foxpack)](https://www.npmjs.com/package/foxpack)
+[![npm version](https://img.shields.io/npm/v/@pooriaarab/foxpack)](https://www.npmjs.com/package/@pooriaarab/foxpack)
+[![Downloads/month](https://img.shields.io/npm/dm/@pooriaarab/foxpack)](https://www.npmjs.com/package/@pooriaarab/foxpack)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue)](https://opensource.org/license/mit)
 
 [Quickstart](#keep-your-first-memory) · [API reference](#runtime-surfaces) · [Export coverage](#coverage) · [FAQ](#faq)
@@ -13,7 +13,7 @@ Agents can read the accepted memories through SCENT or MCP; they never see the r
 ## Install
 
 ```bash
-npm install foxpack
+npm install @pooriaarab/foxpack
 ```
 
 Node.js 24 or later is required.
@@ -27,7 +27,7 @@ Save this as `example.mjs`, then run `node example.mjs`.
 No API keys, network access or `.env` file are needed.
 
 ```js
-import { createPack, inMemoryStore } from "foxpack";
+import { createPack, inMemoryStore } from "@pooriaarab/foxpack";
 
 const pack = createPack({ store: inMemoryStore() });
 await pack.import("memories", "- Prefers aisle seats.\n- Has a dog named Miso.");
@@ -40,10 +40,10 @@ Success prints `[ 'preference: Prefers aisle seats.' ]`.
 From the command line, with a real export:
 
 ```bash
-npx foxpack import chatgpt ~/Downloads/chatgpt-export.zip
-npx foxpack memories --pending
-npx foxpack accept <id>
-npx foxpack export --format markdown > my-memory.md
+npx -p @pooriaarab/foxpack foxpack import chatgpt ~/Downloads/chatgpt-export.zip
+npx -p @pooriaarab/foxpack foxpack memories --pending
+npx -p @pooriaarab/foxpack foxpack accept <id>
+npx -p @pooriaarab/foxpack foxpack export --format markdown > my-memory.md
 ```
 
 ## How it works
@@ -140,7 +140,7 @@ A pack has these methods. They run one at a time.
 
 `fileStore(path?)` keeps the pack in `$FOXPACK_HOME/pack.json`, else `~/.foxpack/pack.json`, with a lock file and atomic writes.
 `readExportFile(path)` checks the size before it reads.
-In Node, `import("foxpack")` resolves to this entry, so `memoryResolver()` with no argument reads the pack file read-only.
+In Node, `import("@pooriaarab/foxpack")` resolves to this entry, so `memoryResolver()` with no argument reads the pack file read-only.
 
 ### CLI
 
@@ -172,7 +172,7 @@ Results go to stdout and messages to stderr. The exit code is 0 when the command
 No tool returns a conversation or a pending candidate, and no tool writes.
 
 ```json
-{ "mcpServers": { "foxpack": { "command": "npx", "args": ["foxpack", "mcp"] } } }
+{ "mcpServers": { "foxpack": { "command": "npx", "args": ["-p", "@pooriaarab/foxpack", "foxpack", "mcp"] } } }
 ```
 
 ### SCENT fields
