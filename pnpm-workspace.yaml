@@ -4,3 +4,4 @@ allowBuilds:
   esbuild: true
 minimumReleaseAgeExclude:
   - create-foxkit@0.1.8
+  - foxmemory@0.1.4

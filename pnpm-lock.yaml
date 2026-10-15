@@ -21,6 +21,9 @@ importers:
       esbuild:
         specifier: ^0.28.2
         version: 0.28.2
+      foxmemory:
+        specifier: ^0.1.4
+        version: 0.1.4
       oxlint:
         specifier: ^1.87.0
         version: 1.88.0
@@ -1162,6 +1165,11 @@ packages:
 
   flatted@3.4.4:
     resolution: {integrity: sha512-5+ybhBZANEJxaH3X5evAFatUxLfEHSr7n6kYJ+1Qd0mUqr4eu9gIf6GDbWHf8RJijHrjjO8G+la14SlL2SeS1Q==}
+
+  foxmemory@0.1.4:
+    resolution: {integrity: sha512-KA8JNUHOPHi/98e9XeafZu8wAhV31Fgq74YfwZaAb4/C8czEPjtitNcTq9HI2y0yRSAxB7B1HxLWzlzbo8E2vA==}
+    engines: {node: '>=24'}
+    hasBin: true
 
   fs-extra@11.4.1:
     resolution: {integrity: sha512-KYAb4c9BJQI6QqGKthV68OHe0badztdXJWKo0WtBA9IuCFPTKvE5ZdUBglP833aMjhaSPNO4A5j/EkzZtGlKjA==}
@@ -2995,6 +3003,8 @@ snapshots:
       keyv: 4.5.4
 
   flatted@3.4.4: {}
+
+  foxmemory@0.1.4: {}
 
   fs-extra@11.4.1:
     dependencies:
