@@ -159,3 +159,9 @@ legend + * { clear: both; }
 .memory .answers .ghost { margin-right: auto; }
 .memory.accepted { border-color: oklch(from var(--ok) l c h / 0.35); }
 .row.top { margin-top: 10px; }
+
+/* Popup */
+.popup-counts { grid-template-columns: repeat(3, minmax(0, 1fr)) !important; margin-top: 12px; }
+#reads { margin: 0; padding: 0; list-style: none; font-size: 13px; }
+#reads li { padding: 6px 0; border-bottom: 1px solid var(--line); }
+#reads li:last-child { border-bottom: 0; }
