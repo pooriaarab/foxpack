@@ -292,7 +292,8 @@ export function createPack(options: PackOptions) {
         for (const m of file.memories.filter((x) => x.status === "accepted")) {
           const i = next.memories.findIndex((x) => x.id === m.id);
           if (i >= 0 && next.memories[i]?.status !== "pending") continue;
-          const record: MemoryRecord = { ...m, decidedAt: m.decidedAt ?? now() };
+          // An export has no originalText (E6): the text it holds is the text the user kept.
+          const record: MemoryRecord = { ...m, originalText: m.text, decidedAt: m.decidedAt ?? now() };
           delete record.foxmemoryId;
           added.push(record);
           if (i >= 0) next.memories[i] = record;
