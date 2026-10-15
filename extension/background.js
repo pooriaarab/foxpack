@@ -1,6 +1,6 @@
-// The demo's background script (an event page in Firefox MV3). The E2E test
-// reads this value back through popup.html. Replace it with code that runs
-// foxpack.
-browser.runtime.onInstalled.addListener(() => {
-  browser.storage.local.set({ fixture: "installed" });
-});
+// The foxpack event page. It answers SCENT requests from the foxscope
+// extension (scent.list, scent.read) with the accepted memories, and sends
+// nothing to any other extension or page. The import page does the rest.
+import { scentListener } from "../src/index.ts";
+
+browser.runtime.onMessageExternal.addListener(scentListener(browser.storage.local));
