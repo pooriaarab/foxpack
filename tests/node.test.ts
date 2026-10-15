@@ -1,11 +1,14 @@
-import { mkdtempSync, readdirSync, readFileSync, statSync, utimesSync, writeFileSync } from "node:fs";
+import { spawnSync } from "node:child_process";
+import { existsSync, mkdtempSync, readdirSync, readFileSync, statSync, utimesSync, writeFileSync } from "node:fs";
+import { open } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { createPack, FoxpackError, fileStore, memoryResolver, packPath, readExportFile } from "../src/node.js";
 
 const dir = () => mkdtempSync(join(tmpdir(), "foxpack-"));
 const errorCode = (p: Promise<unknown>) => p.then(() => "no error", (e: unknown) => (e instanceof FoxpackError ? e.code : String(e)));
+const empty = { format: "foxpack/v1" as const, conversations: [], memories: [], imports: [] };
 const chat = JSON.stringify([{ uuid: "c1", name: "t", created_at: "2026-05-01T00:00:00Z", chat_messages: [{ uuid: "m1", sender: "human", text: "I prefer aisle seats.", created_at: "2026-05-01T00:00:00Z" }] }]);
 
 describe("foxpack/node", () => {
@@ -53,13 +56,43 @@ describe("foxpack/node", () => {
     await b.save({ format: "foxpack/v1", conversations: [], memories: [], imports: [] });
   });
 
-  it("N3: takes over a lock left by a dead process", async () => {
+  it("N3: takes over a lock whose pid is dead, at once", async () => {
     const path = join(dir(), "pack.json");
-    writeFileSync(`${path}.lock`, "99999\n");
+    writeFileSync(`${path}.lock`, `${spawnSync(process.execPath, ["-e", ""]).pid}\n`);
+    await fileStore(path, { waitMs: 100 }).save(empty);
+    expect(JSON.parse(readFileSync(path, "utf8")).format).toBe("foxpack/v1");
+  });
+
+  it("N3: never takes a lock from a live process, however old the lock is", async () => {
+    const path = join(dir(), "pack.json");
+    writeFileSync(`${path}.lock`, `${process.ppid}\n`);
     const old = new Date(Date.now() - 60_000);
     utimesSync(`${path}.lock`, old, old);
-    await fileStore(path, { waitMs: 100 }).save({ format: "foxpack/v1", conversations: [], memories: [], imports: [] });
-    expect(JSON.parse(readFileSync(path, "utf8")).format).toBe("foxpack/v1");
+    expect(await errorCode(fileStore(path, { waitMs: 200, staleMs: 10 }).save(empty))).toBe("locked");
+    expect(readFileSync(`${path}.lock`, "utf8")).toBe(`${process.ppid}\n`);
+  });
+
+  it("N3: a lock with no pid is taken over only when it is old", async () => {
+    const path = join(dir(), "pack.json");
+    writeFileSync(`${path}.lock`, "");
+    expect(await errorCode(fileStore(path, { waitMs: 150 }).save(empty))).toBe("locked");
+    const old = new Date(Date.now() - 60_000);
+    utimesSync(`${path}.lock`, old, old);
+    await fileStore(path, { waitMs: 150 }).save(empty);
+    expect(existsSync(`${path}.lock`)).toBe(false);
+  });
+
+  it("N1: a save flushes the temp file and the folder to disk", async () => {
+    const path = join(dir(), "pack.json");
+    const probe = await open(join(dir(), "probe"), "w");
+    const sync = vi.spyOn(Object.getPrototypeOf(probe), "sync");
+    await probe.close();
+    try {
+      await fileStore(path).save(empty);
+      expect(sync.mock.calls.length).toBeGreaterThanOrEqual(2);
+    } finally {
+      sync.mockRestore();
+    }
   });
 
   it("K6: a pack file that is not JSON is corrupt_store and stays as it is", async () => {
