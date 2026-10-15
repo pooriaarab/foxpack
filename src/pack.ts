@@ -291,6 +291,14 @@ export function createPack(options: PackOptions) {
       });
     },
 
+    /** Deletes every conversation and memory, here and in foxmemory. */
+    clear(): Promise<void> {
+      return run(async (d) => {
+        if (memory) for (const m of d.memories) if (m.foxmemoryId) await memory.forget(m.foxmemoryId);
+        await commit(emptyPack());
+      });
+    },
+
     stats(): Promise<PackStats> {
       return run(async (d) => packStats(d));
     },
