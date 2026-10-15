@@ -8,7 +8,8 @@
 //      a forget in one tab is not undone by an accept in another (K12, B6);
 //   5. the export holds the accepted memories and no rejected one (E1);
 //   6. a stand-in foxscope extension reads accepted memories over
-//      onMessageExternal, and a stand-in stranger gets nothing (B1);
+//      onMessageExternal, and a stand-in stranger gets the error of an
+//      add-on that is not installed (B1);
 //   7. the popup counts the pack and lists the foxscope read.
 // Usage: pnpm e2e [--shots <dir>]. Writes artifacts/e2e-<date>.json.
 import { mkdirSync, readFileSync } from "node:fs";
@@ -76,7 +77,7 @@ const shown = (page) => page.evaluate(() => [...document.querySelectorAll("#revi
 const clickIn = (page, selector) => page.evaluate((s) => document.querySelector(s).click(), selector);
 const ready = (page) => poll(page, () => document.querySelectorAll("#counts .count").length === 4);
 
-async function ask(page, as, payload) {
+async function ask(page, as, payload, to = "foxpack@pooriaarab") {
   return page.evaluate((arg) => new Promise((done) => {
     const id = Math.random().toString(36).slice(2);
     const onReply = (e) => {
@@ -85,8 +86,8 @@ async function ask(page, as, payload) {
       done(e.data.result);
     };
     window.addEventListener("message", onReply);
-    window.postMessage({ fpkAsk: arg.as, id, to: "foxpack@pooriaarab", payload: arg.payload }, "*");
-  }), { as, payload });
+    window.postMessage({ fpkAsk: arg.as, id, to: arg.to, payload: arg.payload }, "*");
+  }), { as, payload, to });
 }
 
 const site = await serve("e2e/site");
@@ -186,12 +187,16 @@ try {
   const read = await ask(web, "foxscope@pooriaarab", { type: "scent.read", fields, derive: true });
   check("foxscope reads the accepted memories only, and no conversations", [b.text, d.text].toSorted(), Object.values(read.reply ?? {}).flat().toSorted());
   check("foxscope gets no memory.conversations key", false, "memory.conversations" in (read.reply ?? {}));
-  const stranger = await ask(web, "stranger@example.com", { type: "scent.read", fields, derive: false });
-  check("a stranger extension gets nothing", true, stranger.ok === false || stranger.reply === undefined);
+  // A stranger must see what it sees when no add-on has the id (B1).
+  const stranger = [await ask(web, "stranger@example.com", { type: "scent.list" }), await ask(web, "stranger@example.com", { type: "scent.read", fields, derive: false })];
+  const absent = await ask(web, "stranger@example.com", { type: "scent.list" }, "nobody@foxpack.test");
   record.stranger = stranger;
+  record.absent = absent;
+  check("a missing add-on gives an error", false, absent.ok);
+  check("a stranger gets the same error as for a missing add-on", [absent, absent], stranger);
   await web.evaluate((arg) => {
     document.getElementById("foxscope").textContent = JSON.stringify(arg.read, null, 2);
-    document.getElementById("stranger").textContent = arg.stranger.reply === undefined ? "No answer: foxpack sent nothing back." : JSON.stringify(arg.stranger, null, 2);
+    document.getElementById("stranger").textContent = JSON.stringify(arg.stranger[1], null, 2);
   }, { read, stranger });
   if (shots) await web.screenshot({ path: join(shots, "site.png"), fullPage: true });
 

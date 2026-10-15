@@ -23,11 +23,12 @@ async function filled() {
 const foxscope = { id: FOXSCOPE_ID };
 
 describe("the extension's onMessageExternal listener", () => {
-  it("B1: answers foxscope, and nobody else", async () => {
+  it("B1: answers foxscope; anybody else gets the error of a missing add-on", async () => {
     const { listen } = await filled();
     for (const sender of [{ id: "evil@example.com" }, { id: "foxscope@pooriaarab.evil" }, {}, undefined, { id: "FOXSCOPE@POORIAARAB" }]) {
-      expect(listen({ type: "scent.list" }, sender)).toBeUndefined();
-      expect(listen({ type: "scent.read", fields: ["memory.preferences"] }, sender)).toBeUndefined();
+      for (const message of [{ type: "scent.list" }, { type: "scent.read", fields: ["memory.preferences"] }, { type: "scent.write" }, null]) {
+        await expect(listen(message, sender)).rejects.toThrow(/^Could not establish connection\. Receiving end does not exist\.$/);
+      }
     }
     expect(((await listen({ type: "scent.list" }, foxscope)) as { name: string }[]).map((f) => f.name)).toContain("memory.preferences");
   });
