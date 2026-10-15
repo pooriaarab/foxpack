@@ -193,7 +193,7 @@ The add-on has the `storage` permission only, and no host permissions.
 - **Patterns, not understanding.** extractMemories matches sentences like "I prefer...", "call me...", "my sister is...". It misses facts said any other way, and it can propose a sentence that is not true of you. You review each one.
 - **No real exports in the tests.** The fixtures follow the field names that open-source parsers read in real exports. A vendor can change its export at any time.
 - **Gemini has no conversation ids.** Entries are grouped by a chat link when the export has one, else each prompt is its own conversation.
-- **One JSON object.** The whole pack is read and written at once. Very large histories (hundreds of MB) are slow, and the 256 MiB cap stops larger files.
+- **One JSON object.** The whole pack is read and written at once, under one storage key in Firefox or in one file in Node. Every review click (accept, reject, edit, forget) reads and rewrites all of it, conversations included, so with a large history each click gets slower. The 256 MiB cap stops larger files.
 - **Not encrypted.** The pack is plain JSON in your home folder or in Firefox storage.
 - **Forget matches words, not meaning.** It removes the sentence that gave the memory and each exact copy of it, also in a re-import. A reply that says the same thing in other words stays in the chat.
 - **ChatGPT memory writes are a history.** A memory you deleted in ChatGPT can still show up as a candidate.
