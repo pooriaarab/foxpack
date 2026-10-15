@@ -124,6 +124,15 @@ describe("createPack", () => {
     expect(await pack.search("o", { limit: 1 })).toHaveLength(1);
   });
 
+  it("clear deletes everything, here and in foxmemory", async () => {
+    const memory = foxmemory();
+    const { pack } = await filled(memory);
+    await pack.accept((await pack.memories())[0]?.id ?? "");
+    await pack.clear();
+    expect(await pack.stats()).toMatchObject({ conversations: 0, memories: { pending: 0, accepted: 0, rejected: 0, forgotten: 0 } });
+    expect(await memory.list()).toEqual([]);
+  });
+
   it("filters memories by status, kind and text", async () => {
     const { pack } = await filled();
     expect((await pack.memories({ kind: "project" })).map((m) => m.kind)).toEqual(["project"]);
