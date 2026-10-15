@@ -29,6 +29,7 @@ trusts it, and never calls a network API to read it.
 | P18 | Claude `memories.json` is Markdown prose with bold headings, not a list. | Headings are skipped, and a paragraph is split into sentences. | `tests/parse.test.ts` |
 | P15 | The Takeout file is `MyActivity.html`, the Takeout default. | `parseGemini` throws `bad_export` and says to choose JSON for My Activity in Takeout. | `tests/parse.test.ts` |
 | P13 | A text is huge (a pasted book in one message). | A message is cut at 20000 characters. A memory line longer than 200 characters is split into sentences, and a sentence longer than 500 characters is skipped. | `tests/parse.test.ts` |
+| P19 | A memory list or memory file has tens of thousands of lines. | Repeats are dropped with a set, in linear time: 60000 lines parse in well under a second, and import into a pack in under 5 s. The import page does not freeze. | `tests/parse.test.ts` |
 | P14 | Two imports of the same file make two copies of every conversation. | A conversation id is `<source>:<id in the export>`. A second import replaces the conversation, it does not add one. | `tests/pack.test.ts` |
 
 ## Zip files and size (`readExport`)
