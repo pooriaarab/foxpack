@@ -10,13 +10,15 @@ export type Json = Record<string, unknown>;
 
 export const isObject = (value: unknown): value is Json => typeof value === "object" && value !== null && !Array.isArray(value);
 
+const LABELS: Record<Source, string> = { chatgpt: "ChatGPT", claude: "Claude", gemini: "Gemini", memories: "memory list" };
+
 /** Parses export text, or takes an already parsed value. */
 export function readJson(contents: unknown, source: Source): unknown {
   if (typeof contents !== "string") return contents;
   try {
     return JSON.parse(contents.replace(/^\uFEFF/, ""));
   } catch {
-    throw new FoxpackError("bad_export", `The ${source} file is not JSON.`);
+    throw new FoxpackError("bad_export", `The ${LABELS[source]} file is not JSON.`);
   }
 }
 
