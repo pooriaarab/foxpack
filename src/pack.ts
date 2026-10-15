@@ -4,7 +4,7 @@
 // storage.local in the extension, or memory in tests.
 import { checkPack, EXPORTED, STORED } from "./check.js";
 import { exportPack, type ExportOptions } from "./export.js";
-import { extractMemories, normalize } from "./extract.js";
+import { extractMemories, normalize, redact } from "./extract.js";
 import { FoxpackError } from "./errors.js";
 import { readExport, type ReadOptions } from "./read.js";
 import { SOURCES, type Conversation, type ImportRecord, type MemoryKind, type MemoryRecord, type MemoryStatus, type PackData, type Source } from "./types.js";
@@ -133,6 +133,8 @@ export function searchConversations(data: PackData, query: string, limit = 20): 
   return hits;
 }
 
+const forgottenIds = (d: PackData) => new Set(d.memories.filter((m) => m.status === "forgotten").map((m) => m.id));
+
 const foxmemoryKind = (kind: MemoryKind) => (kind === "preference" ? "preference" : "fact");
 
 export function createPack(options: PackOptions) {
@@ -153,16 +155,21 @@ export function createPack(options: PackOptions) {
     data = next;
   }
 
-  /** Applies fn to a copy of one memory, then saves. The pack does not change when fn throws. Other records are shared, not copied, so a large pack stays fast. */
-  function change(id: string, fn: (m: MemoryRecord) => Promise<void>): Promise<MemoryRecord> {
+  /**
+   * Applies fn to a copy of one memory, then saves. The pack does not change
+   * when fn throws. fn can return a change to the rest of the pack. Other
+   * records are shared, not copied, so a large pack stays fast.
+   */
+  function change(id: string, fn: (m: MemoryRecord) => Promise<void | ((d: PackData) => PackData)>): Promise<MemoryRecord> {
     return run(async (d) => {
       const at = d.memories.findIndex((m) => m.id === id);
       const old = d.memories[at];
       if (!old) throw new FoxpackError("not_found", `There is no memory with id ${id}.`);
       const record = structuredClone(old);
-      await fn(record);
+      const more = await fn(record);
       record.decidedAt = now();
-      await commit({ ...d, memories: d.memories.with(at, record) });
+      const next = { ...d, memories: d.memories.with(at, record) };
+      await commit(more ? more(next) : next);
       return structuredClone(record);
     });
   }
@@ -176,7 +183,7 @@ export function createPack(options: PackOptions) {
         const candidates = extractMemories(parsed);
         const next: PackData = { ...d, conversations: [...d.conversations], memories: [...d.memories] };
         const byId = new Map(next.conversations.map((c, i) => [c.id, i]));
-        for (const c of parsed.conversations) {
+        for (const c of redact(parsed.conversations, forgottenIds(d))) {
           const at = byId.get(c.id);
           if (at === undefined) next.conversations.push(c);
           else next.conversations[at] = c; // a second import replaces (P14)
@@ -237,12 +244,17 @@ export function createPack(options: PackOptions) {
       });
     },
 
-    /** Deletes the text, here and in foxmemory, and keeps the id so an import does not offer it again (K4). */
+    /**
+     * Deletes the text, here, in the conversations it came from (K11) and
+     * in foxmemory, and keeps the id so an import does not offer it again (K4).
+     */
     forget(id: string): Promise<MemoryRecord> {
       return change(id, async (m) => {
         if (m.foxmemoryId && memory) await memory.forget(m.foxmemoryId);
         delete m.foxmemoryId;
+        const texts = [m.text, m.originalText];
         Object.assign(m, { status: "forgotten", text: "", originalText: "", conversationId: null });
+        return (d) => ({ ...d, conversations: redact(d.conversations, new Set([m.id]), texts) });
       });
     },
 
@@ -270,7 +282,7 @@ export function createPack(options: PackOptions) {
         const file = checkPack(raw, EXPORTED);
         const next: PackData = { ...d, conversations: [...d.conversations], memories: [...d.memories] };
         const at = new Map(next.conversations.map((c, i) => [c.id, i]));
-        for (const c of file.conversations) {
+        for (const c of redact(file.conversations, forgottenIds(d))) {
           const i = at.get(c.id);
           if (i === undefined) next.conversations.push(c);
           else next.conversations[i] = c;
