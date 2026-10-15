@@ -3,7 +3,7 @@
 // make branches). The branch the user last saw ends at `current_node`, so
 // the parser walks from there up to the root (P3).
 import { FoxpackError } from "../errors.js";
-import type { Conversation, Message, ParsedExport } from "../types.js";
+import type { Conversation, Message, ParsedExport, SavedMemory } from "../types.js";
 import { clip, isObject, readJson, str, toIso, type Json } from "./common.js";
 
 // Content types that hold what a person or the model said. Code, tool
@@ -68,6 +68,34 @@ function toConversation(value: unknown): Conversation | null {
   };
 }
 
+const textOf = (content: Json): string =>
+  Array.isArray(content.parts) ? content.parts.filter((p): p is string => typeof p === "string").join("\n") : str(content.text);
+
+/**
+ * Memories that hide inside the chats. The export has no list of saved
+ * memories, but each write to memory is a message to the "bio" tool, and
+ * custom instructions ("about you") ride along in message metadata. Both
+ * are read from every node, not only the current branch: a write on an
+ * old branch still happened.
+ */
+function notes(item: Json, conversationId: string, about: Set<string>): SavedMemory[] {
+  const found: SavedMemory[] = [];
+  for (const node of Object.values(isObject(item.mapping) ? item.mapping : {})) {
+    const m = isObject(node) ? node.message : null;
+    if (!isObject(m)) continue;
+    if (m.recipient === "bio" && isObject(m.author) && m.author.role === "assistant" && isObject(m.content)) {
+      for (const line of textOf(m.content).split("\n")) {
+        const text = line.trim();
+        if (text) found.push({ text, conversationId, date: toIso(m.create_time) });
+      }
+    }
+    const context = isObject(m.metadata) ? m.metadata.user_context_message_data : null;
+    const aboutUser = isObject(context) ? str(context.about_user_message).trim() : "";
+    if (aboutUser) about.add(aboutUser);
+  }
+  return found;
+}
+
 /** Parses ChatGPT conversations.json (text or parsed JSON). Throws `bad_export` for the wrong shape. */
 export function parseChatGPT(contents: unknown): ParsedExport {
   const data = readJson(contents, "chatgpt");
@@ -76,11 +104,21 @@ export function parseChatGPT(contents: unknown): ParsedExport {
     throw new FoxpackError("bad_export", "This is not a ChatGPT export: no conversation has a mapping.");
   }
   const conversations: Conversation[] = [];
+  const savedMemories: SavedMemory[] = [];
+  const about = new Set<string>();
   let skipped = 0;
   for (const item of data) {
     const conversation = toConversation(item);
-    if (conversation) conversations.push(conversation);
-    else skipped++;
+    if (conversation && isObject(item)) {
+      conversations.push(conversation);
+      savedMemories.push(...notes(item, conversation.id, about));
+    } else skipped++;
   }
-  return { source: "chatgpt", conversations, savedMemories: [], skipped };
+  // Custom instructions repeat in every chat. Each distinct text becomes
+  // one user message, so extractMemories reads it like the user's words.
+  if (about.size > 0) {
+    const messages = [...about].map((text, i) => ({ id: `about-${i}`, role: "user" as const, text: clip(text), createdAt: null }));
+    conversations.push({ id: "chatgpt:custom-instructions", source: "chatgpt", title: "Custom instructions", createdAt: null, updatedAt: null, messages });
+  }
+  return { source: "chatgpt", conversations, savedMemories, skipped };
 }
