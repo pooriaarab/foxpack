@@ -1,6 +1,7 @@
 // foxpack/node: the pack in a JSON file for the CLI, the MCP server and
 // Node callers. In Node, `import("foxpack")` gives this entry too, so
 // `memoryResolver()` with no argument reads ~/.foxpack/pack.json.
+import { AsyncLocalStorage } from "node:async_hooks";
 import { randomBytes } from "node:crypto";
 import { link, mkdir, open, readFile, rename, rm, stat } from "node:fs/promises";
 import { homedir } from "node:os";
@@ -65,7 +66,9 @@ export function fileStore(path: string = packPath(), options: FileStoreOptions =
   const lockPath = `${path}.lock`;
   const waitMs = options.waitMs ?? 5000;
   const staleMs = options.staleMs ?? 30_000;
-  let held = 0;
+  // The calls that run inside the lock, so a save there does not wait for itself (N4).
+  const inside = new AsyncLocalStorage<true>();
+  let turn: Promise<unknown> = Promise.resolve();
 
   /** Is the lock at `file` free to take: its pid is gone, or it has no pid and is old (N3)? */
   async function abandoned(file: string): Promise<boolean> {
@@ -111,15 +114,19 @@ export function fileStore(path: string = packPath(), options: FileStoreOptions =
     }
   }
 
-  async function lock<T>(fn: () => Promise<T>): Promise<T> {
-    if (held === 0) await acquire();
-    held++;
-    try {
-      return await fn();
-    } finally {
-      held--;
-      if (held === 0) await rm(lockPath, { force: true });
-    }
+  /** Runs fn under the lock file. Callers take turns: another pack on this store waits too (N4). */
+  function lock<T>(fn: () => Promise<T>): Promise<T> {
+    if (inside.getStore()) return fn();
+    const next = turn.then(async () => {
+      await acquire();
+      try {
+        return await inside.run(true, fn);
+      } finally {
+        await rm(lockPath, { force: true });
+      }
+    });
+    turn = next.catch(() => undefined);
+    return next;
   }
 
   return {
