@@ -1,0 +1,43 @@
+[
+  {
+    "header": "Gemini Apps",
+    "title": "Prompted I'm a nurse on night shifts. What should I eat at 3am?",
+    "titleUrl": "https://gemini.google.com/app/1a2b3c4d5e",
+    "time": "2026-04-02T03:00:10.000Z",
+    "products": ["Gemini Apps"],
+    "activityControls": ["Gemini Apps Activity"],
+    "safeHtmlItem": [{ "html": "<p>Try <b>light</b> meals &amp; protein.</p><ul><li>Greek yogurt</li><li>Nuts &#8212; a handful</li></ul><script>alert(1)</script>" }]
+  },
+  {
+    "header": "Gemini Apps",
+    "title": "Created Gemini Canvas titled Shift plan",
+    "time": "2026-04-01T08:00:00.000Z",
+    "products": ["Gemini Apps"]
+  },
+  {
+    "header": "Gemini Apps",
+    "title": "Prompted And something with no sugar?",
+    "titleUrl": "https://gemini.google.com/app/1a2b3c4d5e",
+    "time": "2026-04-02T03:05:00.000Z",
+    "products": ["Gemini Apps"]
+  },
+  {
+    "header": "Gemini Apps",
+    "title": "Used Gemini Apps",
+    "time": "2026-04-01T07:00:00.000Z",
+    "products": ["Gemini Apps"]
+  },
+  {
+    "header": "Search",
+    "title": "Prompted searched for flights",
+    "time": "2026-04-01T06:00:00.000Z",
+    "products": ["Search"]
+  },
+  {
+    "header": "Bard",
+    "title": "Prompted My favorite color is green.",
+    "time": "2025-12-24T10:00:00.000Z",
+    "products": ["Gemini Apps"],
+    "safeHtmlItem": [{ "html": "Green is a calm color.<br>Nice!" }]
+  }
+]
