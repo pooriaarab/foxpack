@@ -4,7 +4,8 @@
 //      zip and a memory list in the page, and shows the counts per source;
 //   2. a wrong file shows an error and changes nothing (B4);
 //   3. the candidates match what the Node library finds in the same files;
-//   4. two accepts and one reject persist after the page reloads (B5);
+//   4. two accepts and one reject persist after the page reloads (B5), and
+//      a forget in one tab is not undone by an accept in another (K12, B6);
 //   5. the export holds the accepted memories and no rejected one (E1);
 //   6. a stand-in foxscope extension reads accepted memories over
 //      onMessageExternal, and a stand-in stranger gets nothing (B1);
@@ -144,6 +145,22 @@ try {
     await page.screenshot({ path: join(shots, "import.png"), fullPage: true });
   }
 
+  // 4b. Two tabs: a forget in one is not undone by the other (K12), and
+  // the other tab draws the change (B6).
+  const other = await fox.openExtensionPage("import.html");
+  await ready(other);
+  const d = (await shown(other))[0];
+  await clickIn(page, '[data-view="accepted"]');
+  await poll(page, (id) => Boolean(document.querySelector(`[data-id="${id}"]`)), a.id);
+  await clickIn(page, `[data-id="${a.id}"] .forget`);
+  await poll(page, (id) => !document.querySelector(`[data-id="${id}"]`), a.id);
+  check("the other tab draws the forget", 1, await poll(other, () => document.querySelector('#counts [data-source="accepted"]')?.dataset.count === "1" && 1));
+  await clickIn(other, `[data-id="${d.id}"] .accept`);
+  await poll(other, (id) => !document.querySelector(`[data-id="${id}"]`), d.id);
+  const stored = await page.evaluate(async (ids) => (await browser.storage.local.get("fpk:pack"))["fpk:pack"].memories.filter((m) => ids.includes(m.id)).map((m) => [m.status, m.text]), [a.id, d.id]);
+  check("a forget in one tab stays after an accept in another", [["accepted", d.text], ["forgotten", ""]], stored.toSorted((x, y) => x[0].localeCompare(y[0])));
+  await other.close();
+
   // 5. The export: catch the download link and read the file it points to.
   const exported = await page.evaluate(() => new Promise((done) => {
     HTMLAnchorElement.prototype.click = function () {
@@ -154,7 +171,8 @@ try {
   }));
   const file = JSON.parse(exported.text);
   check("the export is a foxpack file", ["foxpack/v1", true], [file.format, /^foxpack-\d{4}-\d{2}-\d{2}\.json$/.test(exported.name)]);
-  check("the export has the accepted memories", [a.text, b.text].toSorted(), file.memories.map((m) => m.text).toSorted());
+  check("the export has the accepted memories", [b.text, d.text].toSorted(), file.memories.map((m) => m.text).toSorted());
+  check("the export has no trace of the forgotten memory", false, exported.text.toLowerCase().includes(a.text.toLowerCase()));
   check("the export has no rejected or pending memory", true, file.memories.every((m) => m.status === "accepted") && !file.memories.some((m) => m.text === c.text));
   check("the export has the conversations", 8, file.conversations.length);
   await page.close();
@@ -166,7 +184,7 @@ try {
   const list = await ask(web, "foxscope@pooriaarab", { type: "scent.list" });
   check("foxscope lists the fields; conversations are private", "private", list.reply?.find((f) => f.name === "memory.conversations")?.sensitivity);
   const read = await ask(web, "foxscope@pooriaarab", { type: "scent.read", fields, derive: true });
-  check("foxscope reads the accepted memories only, and no conversations", [a.text, b.text].toSorted(), Object.values(read.reply ?? {}).flat().toSorted());
+  check("foxscope reads the accepted memories only, and no conversations", [b.text, d.text].toSorted(), Object.values(read.reply ?? {}).flat().toSorted());
   check("foxscope gets no memory.conversations key", false, "memory.conversations" in (read.reply ?? {}));
   const stranger = await ask(web, "stranger@example.com", { type: "scent.read", fields, derive: false });
   check("a stranger extension gets nothing", true, stranger.ok === false || stranger.reply === undefined);
@@ -180,7 +198,7 @@ try {
   // 7. The popup.
   const popup = await fox.openExtensionPage("popup.html");
   await poll(popup, () => Boolean(document.getElementById("accepted")));
-  check("the popup counts the pack", { conversations: 8, pending: n - 3, accepted: 2 }, await popup.evaluate(() => Object.fromEntries([...document.querySelectorAll(".count")].map((el) => [el.id, Number(el.dataset.count)]))));
+  check("the popup counts the pack", { conversations: 8, pending: n - 4, accepted: 2 }, await popup.evaluate(() => Object.fromEntries([...document.querySelectorAll(".count")].map((el) => [el.id, Number(el.dataset.count)]))));
   check("the popup lists the foxscope read", true, await popup.evaluate(() => /memory\.preferences|memory\.facts|memory\.people/.test(document.getElementById("reads").textContent)));
   if (shots) await popup.screenshot({ path: join(shots, "popup.png") });
 } catch (error) {

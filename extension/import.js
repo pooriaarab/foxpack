@@ -1,7 +1,7 @@
 // The import page. It reads an export file in this page, with no upload
 // (B3), keeps the pack in storage.local, and lists the memory candidates
 // for review. Each decision is saved before the list changes (B5).
-import { createPack, DEFAULT_MAX_BYTES, FoxpackError, SERVICE, storageStore } from "../src/index.ts";
+import { createPack, DEFAULT_MAX_BYTES, FoxpackError, PACK_KEY, SERVICE, storageStore } from "../src/index.ts";
 
 const pack = createPack({ store: storageStore(browser.storage.local) });
 const $ = (id) => document.getElementById(id);
@@ -120,5 +120,9 @@ for (const tab of document.querySelectorAll(".tabs button")) tab.addEventListene
 $("export").addEventListener("click", () => exportPack().catch((error) => say("bad", error.message)));
 $("clear").addEventListener("click", () => {
   if (confirm("Delete every imported conversation and memory from foxpack?")) act(() => pack.clear()).then(() => say("ok", "The pack is empty."));
+});
+// Another tab changed the pack: draw what is stored now (B6).
+browser.storage.onChanged.addListener((changes, area) => {
+  if (area === "local" && PACK_KEY in changes) render().catch((error) => say("bad", error.message));
 });
 render().catch((error) => say("bad", error.message));

@@ -27,8 +27,6 @@ export interface FileStoreOptions {
 
 export interface FileStore extends PackStore {
   readonly path: string;
-  /** Runs fn while this process holds the lock, so a read-change-write cannot lose another writer's change (N3). */
-  lock<T>(fn: () => Promise<T>): Promise<T>;
 }
 
 const sleep = (ms: number) => new Promise((done) => setTimeout(done, ms));

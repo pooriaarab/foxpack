@@ -72,6 +72,7 @@ trusts it, and never calls a network API to read it.
 | K9 | `search` with an empty query returns the whole pack. | It throws `bad_input`. Results are capped at `limit` (default 20). | `tests/pack.test.ts` |
 | K10 | Edits of an accepted memory are lost in foxmemory. | `edit` of an accepted memory calls `memory.update`. | `tests/pack.test.ts` |
 | K11 | `forget` clears the memory, but the sentence it came from stays in the conversations, so search, exports and a re-import still have it. | `forget` replaces each user sentence that gives this memory, and each copy of its text in any message, with `[forgotten]`. An import and a restore do the same for every forgotten id, so the text does not come back. A reply that says the same thing in other words stays. | `tests/pack.test.ts` |
+| K12 | Two tabs (or two processes) hold one pack. Each keeps its own copy, so a write in one tab puts back what the other tab changed: a memory forgotten in tab A comes back as pending, with its text, when tab B accepts another one. | A pack keeps no copy: every call reads the store again. Every write runs under the store's lock (Web Locks in Firefox, the lock file in Node), so a write always starts from the last saved pack. A forgotten memory stays forgotten, and accepting it in a stale tab throws. | `tests/pack.test.ts`, `tests/background.test.ts`, E2E |
 
 ## Export (`pack.export`)
 
@@ -124,6 +125,7 @@ trusts it, and never calls a network API to read it.
 | B3 | The import page uploads an export to read it. | The page reads the file with `File.arrayBuffer()` and parses it in the page. The manifest has no host permissions, so a request cannot leave. | E2E, manifest review |
 | B4 | A wrong file is dropped (a photo, a zip of something else). | The page shows the error in words and stores nothing. | E2E |
 | B5 | Decisions are lost when the page reloads. | Each decision is saved in `storage.local` before the list changes. After a reload the list shows the same states. | E2E |
+| B6 | A second open import page shows a list that another page changed. | The page listens to `storage.onChanged` and draws the list again. | E2E |
 
 ## Data collection declaration (`extension/manifest.json`)
 
