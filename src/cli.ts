@@ -7,7 +7,7 @@ import { parseArgs } from "node:util";
 import { FoxpackError } from "./errors.js";
 import { EXPORT_FORMATS, type ExportFormat } from "./export.js";
 import { createPack, type Pack } from "./pack.js";
-import { fileStore, packPath, readExportFile, readOnlySource, type FileStore } from "./node.js";
+import { fileStore, packPath, readExportFile, readOnlySource } from "./node.js";
 import { SOURCES, type MemoryRecord, type MemoryStatus, type Source } from "./types.js";
 
 export interface Io {
@@ -43,18 +43,18 @@ class UsageError extends Error {}
 
 const line = (m: MemoryRecord) => `${m.id}  ${m.kind}  ${m.confidence.toFixed(2)}  ${m.status === "accepted" ? "" : `[${m.status}] `}${m.text}\n`;
 
-async function importCommand(pack: Pack, store: FileStore, rest: string[], io: Io): Promise<void> {
+async function importCommand(pack: Pack, rest: string[], io: Io): Promise<void> {
   const [source, file, ...extra] = rest;
   if (!source || !file || extra.length > 0) throw new UsageError("import needs a source and one file.");
   const bytes = await readExportFile(file);
   if (source === "foxpack") {
-    const r = await store.lock(() => pack.restore(bytes));
+    const r = await pack.restore(bytes);
     io.err(`Restored ${r.conversations} conversations and ${r.memories} memories to review.\n`);
     io.err("Review them with: foxpack memories --pending\n");
     return;
   }
   if (!SOURCES.includes(source as Source)) throw new UsageError(`The source must be chatgpt, claude, gemini, memories or foxpack, not ${source}.`);
-  const r = await store.lock(() => pack.import(source as Source, bytes));
+  const r = await pack.import(source as Source, bytes);
   io.err(`Imported ${r.conversations} conversations and ${r.added} new memory candidates from ${r.source}${r.skipped ? ` (${r.skipped} ${r.skipped === 1 ? "entry" : "entries"} skipped)` : ""}.\n`);
   io.err("Review them with: foxpack memories --pending\n");
 }
@@ -64,7 +64,7 @@ async function command(name: string, rest: string[], io: Io): Promise<void> {
   const pack = createPack({ store });
   switch (name) {
     case "import":
-      return importCommand(pack, store, rest, io);
+      return importCommand(pack, rest, io);
     case "stats": {
       if (rest.length > 0) throw new UsageError("stats takes no arguments.");
       const s = await pack.stats();
@@ -82,15 +82,13 @@ async function command(name: string, rest: string[], io: Io): Promise<void> {
     case "reject":
     case "forget": {
       if (rest.length === 0) throw new UsageError(`${name} needs at least one id.`);
-      await store.lock(async () => {
-        for (const id of rest) io.err(`${name === "accept" ? "Accepted" : name === "reject" ? "Rejected" : "Forgot"}: ${(await pack[name](id)).text || id}\n`);
-      });
+      for (const id of rest) io.err(`${name === "accept" ? "Accepted" : name === "reject" ? "Rejected" : "Forgot"}: ${(await pack[name](id)).text || id}\n`);
       return;
     }
     case "edit": {
       const [id, ...words] = rest;
       if (!id || words.length === 0) throw new UsageError("edit needs an id and the new text.");
-      const m = await store.lock(() => pack.edit(id, words.join(" ")));
+      const m = await pack.edit(id, words.join(" "));
       io.err(`Edited: ${m.text}\n`);
       return;
     }
