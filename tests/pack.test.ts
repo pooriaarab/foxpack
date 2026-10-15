@@ -10,6 +10,7 @@ const embedder = { embed: async (texts: string[]) => ({ model: "fixed-v1", vecto
 const foxmemory = () => createMemory({ store: memoryStore(), embedder });
 
 const say = (uuid: string, sender: string, text: string) => ({ uuid, sender, text, created_at: "2026-03-01T10:00:00Z" });
+const prompt = (text: string, link: string) => ({ header: "Gemini Apps", title: `Prompted ${text}`, titleUrl: `https://gemini.google.com/app/${link}`, time: "2026-04-02T03:00:10.000Z", products: ["Gemini Apps"] });
 const bigTurn = (i: number) => ({ uuid: `u${i}`, sender: "human", text: `${"We talked about the garden again. ".repeat(60)}I prefer red tomatoes number ${i}.`, created_at: "2026-03-01T10:00:00Z" });
 
 async function filled(memory?: MemorySink) {
@@ -139,6 +140,28 @@ describe("createPack", () => {
       ]],
       ["Bikes", ["Janet and I ride bikes. [forgotten] I like it here.", "Is Janet in Paris too?"]],
     ]);
+  });
+
+  it("K15: forget removes the sentence from a title that holds it, and keeps a title in other words", async () => {
+    const long = `My sister Jane has epilepsy. ${"We plan a long trip by train and by boat. ".repeat(3)}`;
+    const claude = JSON.stringify([
+      { uuid: "c1", name: "My sister Jane has epilepsy.", created_at: "2026-03-01T10:00:00Z", chat_messages: [say("u1", "human", "My sister Jane has epilepsy. I like green tea.")] },
+      { uuid: "c2", name: "Jane's epilepsy", created_at: "2026-03-02T10:00:00Z", chat_messages: [say("u2", "human", "My sister Jane has epilepsy.")] },
+      { uuid: "c3", name: "My sister Jane has epilepsy.", created_at: "2026-03-03T10:00:00Z", chat_messages: [say("u3", "human", "I like black tea.")] },
+    ]);
+    const store = inMemoryStore();
+    const pack = createPack({ store });
+    await pack.import("claude", claude);
+    await pack.import("gemini", JSON.stringify([prompt("My sister Jane has epilepsy. Is a beach safe?", "1a"), prompt(long, "2b")]));
+    const titles = async () => (await pack.conversations()).map((c) => c.title);
+    expect((await titles()).slice(3)).toEqual(["My sister Jane has epilepsy. Is a beach safe?", `${long.slice(0, 79)}…`]);
+    await pack.forget((await pack.memories({ query: "epilepsy" }))[0]?.id ?? "");
+    // c3 holds the sentence in its title only, so it is not where the memory came from.
+    const after = ["[forgotten]", "Jane's epilepsy", "My sister Jane has epilepsy.", "[forgotten] Is a beach safe?", `[forgotten] ${long.slice(29, 96)}…`];
+    expect(await titles()).toEqual(after);
+    await pack.import("claude", claude);
+    await pack.import("gemini", JSON.stringify([prompt("My sister Jane has epilepsy. Is a beach safe?", "1a"), prompt(long, "2b")]));
+    expect(await titles()).toEqual(after);
   });
 
   it("K12: a forget in one pack is not undone by a second pack on the same store", async () => {
