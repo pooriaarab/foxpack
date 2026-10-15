@@ -1,0 +1,33 @@
+[
+  {
+    "title": "Trip to Lisbon",
+    "create_time": 1767225600.123,
+    "update_time": 1767229200.5,
+    "conversation_id": "6795a1b2-0001",
+    "id": "6795a1b2-0001",
+    "current_node": "n5",
+    "mapping": {
+      "root": { "id": "root", "message": null, "parent": null, "children": ["n0"] },
+      "n0": { "id": "n0", "parent": "root", "children": ["n1"], "message": { "id": "n0", "author": { "role": "system", "name": null }, "create_time": null, "content": { "content_type": "text", "parts": [""] }, "metadata": { "is_visually_hidden_from_conversation": true }, "recipient": "all" } },
+      "n1": { "id": "n1", "parent": "n0", "children": ["n2a", "n2b"], "message": { "id": "n1", "author": { "role": "user", "name": null }, "create_time": 1767225601.0, "content": { "content_type": "text", "parts": ["I prefer aisle seats. Plan a trip to Lisbon for me."] }, "metadata": {}, "recipient": "all" } },
+      "n2a": { "id": "n2a", "parent": "n1", "children": [], "message": { "id": "n2a", "author": { "role": "assistant", "name": null }, "create_time": 1767225602.0, "content": { "content_type": "text", "parts": ["OLD BRANCH answer that was regenerated."] }, "metadata": {}, "recipient": "all" } },
+      "n2b": { "id": "n2b", "parent": "n1", "children": ["n3"], "message": { "id": "n2b", "author": { "role": "assistant", "name": null }, "create_time": 1767225603.0, "content": { "content_type": "code", "language": "unknown", "text": "search(\"lisbon\")" }, "metadata": {}, "recipient": "browser" } },
+      "n3": { "id": "n3", "parent": "n2b", "children": ["n4"], "message": { "id": "n3", "author": { "role": "tool", "name": "browser" }, "create_time": 1767225604.0, "content": { "content_type": "tether_browsing_display", "result": "web results" }, "metadata": {}, "recipient": "all" } },
+      "n4": { "id": "n4", "parent": "n3", "children": ["n5"], "message": { "id": "n4", "author": { "role": "assistant", "name": null }, "create_time": 1767225605.0, "content": { "content_type": "text", "parts": ["Here is a 3 day plan for Lisbon."] }, "metadata": {}, "recipient": "all" } },
+      "n5": { "id": "n5", "parent": "n4", "children": [], "message": { "id": "n5", "author": { "role": "user", "name": null }, "create_time": 1767225606.0, "content": { "content_type": "multimodal_text", "parts": [{ "content_type": "image_asset_pointer", "asset_pointer": "file-service://file-abc" }, "I'm allergic to shellfish, so skip seafood places."] }, "metadata": {}, "recipient": "all" } }
+    }
+  },
+  {
+    "title": "",
+    "create_time": null,
+    "update_time": "not a time",
+    "conversation_id": "6795a1b2-0002",
+    "current_node": "b2",
+    "mapping": {
+      "b1": { "id": "b1", "parent": "b2", "children": ["b2"], "message": { "id": "b1", "author": { "role": "user" }, "create_time": 1767300000, "content": { "content_type": "text", "parts": ["Call me Sam."] }, "recipient": "all" } },
+      "b2": { "id": "b2", "parent": "b1", "children": ["b1"], "message": { "id": "b2", "author": { "role": "assistant" }, "create_time": 1767300001, "content": { "content_type": "text", "parts": ["Sure, Sam."] }, "recipient": "all" } }
+    }
+  },
+  { "title": "No mapping", "conversation_id": "6795a1b2-0003" },
+  { "title": "Missing parent", "conversation_id": "6795a1b2-0004", "current_node": "c2", "mapping": { "c2": { "id": "c2", "parent": "gone", "children": [], "message": null } } }
+]

@@ -1,2 +1,4 @@
-// The public API of foxpack. Replace this export with the real one.
-export const name = "foxpack";
+// The public API of foxpack.
+export { FoxpackError, type FoxpackErrorCode } from "./errors.js";
+export { parseChatGPT } from "./parse/chatgpt.js";
+export * from "./types.js";
