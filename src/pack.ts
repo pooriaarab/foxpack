@@ -13,6 +13,11 @@ import { SOURCES, type Conversation, type ImportRecord, type MemoryKind, type Me
 export interface PackStore {
   load(): Promise<unknown>;
   save(data: PackData): Promise<void>;
+  /**
+   * Runs fn while no other writer of this store runs: another tab, another
+   * process, another pack. A write is load, change and save under it (K12).
+   */
+  lock<T>(fn: () => Promise<T>): Promise<T>;
 }
 
 /**
@@ -140,20 +145,20 @@ const foxmemoryKind = (kind: MemoryKind) => (kind === "preference" ? "preference
 export function createPack(options: PackOptions) {
   const { store, memory } = options;
   const now = () => (options.now ?? (() => new Date()))().toISOString();
-  let data: PackData | undefined;
   let chain: Promise<unknown> = Promise.resolve();
 
-  // One call at a time, so two calls never lose a write (K8).
-  function run<T>(fn: (d: PackData) => Promise<T>): Promise<T> {
-    const next = chain.then(async () => fn((data ??= parsePack(await store.load()))));
+  // One call at a time, so two calls never lose a write (K8). The pack is
+  // read from the store for every call and never kept, because another tab
+  // or process can change it (K12).
+  function queue<T>(fn: () => Promise<T>): Promise<T> {
+    const next = chain.then(fn);
     chain = next.catch(() => undefined);
     return next;
   }
-
-  async function commit(next: PackData) {
-    await store.save(next);
-    data = next;
-  }
+  const run = <T>(fn: (d: PackData) => Promise<T>): Promise<T> => queue(async () => fn(parsePack(await store.load())));
+  /** A call that saves: it reads, changes and saves under the store's lock. */
+  const write = <T>(fn: (d: PackData) => Promise<T>): Promise<T> => queue(() => store.lock(async () => fn(parsePack(await store.load()))));
+  const commit = (next: PackData) => store.save(next);
 
   /**
    * Applies fn to a copy of one memory, then saves. The pack does not change
@@ -161,7 +166,7 @@ export function createPack(options: PackOptions) {
    * records are shared, not copied, so a large pack stays fast.
    */
   function change(id: string, fn: (m: MemoryRecord) => Promise<void | ((d: PackData) => PackData)>): Promise<MemoryRecord> {
-    return run(async (d) => {
+    return write(async (d) => {
       const at = d.memories.findIndex((m) => m.id === id);
       const old = d.memories[at];
       if (!old) throw new FoxpackError("not_found", `There is no memory with id ${id}.`);
@@ -178,7 +183,7 @@ export function createPack(options: PackOptions) {
     /** Reads one export file and adds it. Parsing finishes before anything is written (K7). */
     import(source: Source, contents: Uint8Array | ArrayBuffer | string, read: ReadOptions = options.read ?? {}): Promise<ImportResult> {
       if (!SOURCES.includes(source)) return Promise.reject(new FoxpackError("bad_input", `The source must be one of ${SOURCES.join(", ")}.`));
-      return run(async (d) => {
+      return write(async (d) => {
         const parsed = readExport(source, contents, read);
         const candidates = extractMemories(parsed);
         const next: PackData = { ...d, conversations: [...d.conversations], memories: [...d.memories] };
@@ -270,7 +275,7 @@ export function createPack(options: PackOptions) {
      * One bad record and nothing is saved (E7).
      */
     restore(contents: string | Uint8Array): Promise<{ conversations: number; memories: number }> {
-      return run(async (d) => {
+      return write(async (d) => {
         const text = typeof contents === "string" ? contents : new TextDecoder().decode(contents);
         checkDepth(text);
         let raw: unknown;
@@ -301,7 +306,7 @@ export function createPack(options: PackOptions) {
 
     /** Deletes every conversation and memory, here and in foxmemory. */
     clear(): Promise<void> {
-      return run(async (d) => {
+      return write(async (d) => {
         if (memory) for (const m of d.memories) if (m.foxmemoryId) await memory.forget(m.foxmemoryId);
         await commit(emptyPack());
       });
@@ -323,7 +328,13 @@ export type Pack = ReturnType<typeof createPack>;
 /** A store in this process's memory. It starts empty, or with a copy of `initial`. */
 export function inMemoryStore(initial?: unknown): PackStore & { saved: PackData | null } {
   let saved = initial === undefined ? null : structuredClone(initial);
+  let chain: Promise<unknown> = Promise.resolve();
   return {
+    lock<T>(fn: () => Promise<T>): Promise<T> {
+      const next = chain.then(fn);
+      chain = next.catch(() => undefined);
+      return next;
+    },
     get saved() {
       return saved as PackData | null;
     },

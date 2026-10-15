@@ -108,6 +108,21 @@ describe("createPack", () => {
     expect((await pack.memories({ query: "green tea" })).length).toBe(1);
   });
 
+  it("K12: a forget in one pack is not undone by a second pack on the same store", async () => {
+    const store = inMemoryStore();
+    const a = createPack({ store });
+    const b = createPack({ store });
+    await a.import("memories", "- My sister Jane has epilepsy.\n- Likes long walks.");
+    const [sister, walks] = await b.memories();
+    await a.accept(sister?.id ?? "");
+    await a.forget(sister?.id ?? "");
+    await b.accept(walks?.id ?? "");
+    expect(store.saved?.memories.map((m) => [m.status, m.text])).toEqual([["forgotten", ""], ["accepted", "Likes long walks."]]);
+    expect(await errorCode(b.accept(sister?.id ?? ""))).toBe("bad_input");
+    await Promise.all([a.import("memories", "- Prefers tea."), b.import("memories", "- Prefers jazz.")]);
+    expect((await a.memories({ status: "pending" })).map((m) => m.text).toSorted()).toEqual(["Prefers jazz.", "Prefers tea."]);
+  });
+
   it("K5: when foxmemory fails, the candidate stays pending", async () => {
     const broken: MemorySink = { remember: async () => Promise.reject(new Error("disk full")), update: async () => undefined, forget: async () => true };
     const { pack } = await filled(broken);

@@ -15,11 +15,21 @@ export const READS_KEY = "fpk:reads";
 /** The only extension that may read memories (B1). */
 export const FOXSCOPE_ID = "foxscope@pooriaarab";
 
-/** The pack in one storage.local key. */
-export function storageStore(area: StorageArea, key = PACK_KEY): PackStore {
+/** The parts of the Web Locks API (navigator.locks) that foxpack uses. */
+export interface Locks {
+  request<T>(name: string, fn: () => Promise<T>): Promise<T>;
+}
+
+/**
+ * The pack in one storage.local key. Writes take a Web Lock named after the
+ * key, which every page and the event page of the add-on share, so a stale
+ * tab cannot write over another tab's change (K12).
+ */
+export function storageStore(area: StorageArea, key = PACK_KEY, locks: Locks = navigator.locks): PackStore {
   return {
     load: async () => (await area.get(key))[key] ?? null,
     save: (data: PackData) => area.set({ [key]: data }),
+    lock: (fn) => locks.request(key, fn),
   };
 }
 

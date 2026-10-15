@@ -1,6 +1,6 @@
 // The public API of foxpack.
 export { candidateId, classify, extractMemories, MAX_TURN_CHARS, normalize, type ExtractInput } from "./extract.js";
-export { FOXSCOPE_ID, PACK_KEY, READS_KEY, scentListener, storageStore, type ReadNotice, type StorageArea } from "./browser.js";
+export { FOXSCOPE_ID, PACK_KEY, READS_KEY, scentListener, storageStore, type Locks, type ReadNotice, type StorageArea } from "./browser.js";
 export { escapeMarkdown, EXPORT_FORMATS, exportPack, SERVICE, toDti, type DtiConversation, type ExportFormat, type ExportOptions } from "./export.js";
 export { FoxpackError, type FoxpackErrorCode } from "./errors.js";
 export { parseChatGPT } from "./parse/chatgpt.js";
