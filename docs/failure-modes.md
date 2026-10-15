@@ -127,6 +127,15 @@ trusts it, and never calls a network API to read it.
 | B5 | Decisions are lost when the page reloads. | Each decision is saved in `storage.local` before the list changes. After a reload the list shows the same states. | E2E |
 | B6 | A second open import page shows a list that another page changed. | The page listens to `storage.onChanged` and draws the list again. | E2E |
 
+## Release (`.github/workflows/release.yml`)
+
+| # | Failure mode | Wanted behavior | Test |
+|---|---|---|---|
+| R1 | One job holds every permission, so any step (a dependency's install script, a test) can mint an npm provenance token or push to the repo. | The workflow grants nothing. Each job asks for its own: `id-token: write` only in the npm publish job, `contents: write` only in the job that tags and creates the GitHub release. | `tests/release.test.ts` |
+| R2 | `pnpm install` runs, with all its dependencies' code, in the job that holds `id-token` or the npm token. | The check job builds once, packs the npm tarball, `dist/`, `dist-ext/` and `source.zip`, and passes them on as an artifact. The npm job installs nothing and publishes the tarball. The AMO job installs with `--ignore-scripts`, and only its signing step sees the AMO keys. | `tests/release.test.ts` |
+| R3 | A build that breaks in Firefox is published, because no E2E runs before `npm publish` or `web-ext sign`. | An E2E job runs `e2e/run.mjs` on Ichabod (secret `ICHABOD_API_KEY`) on the release build from the artifact. Publishing waits for it. | `tests/release.test.ts` |
+| R4 | The E2E job downloads cloudflared, and a changed binary runs in CI. | cloudflared is one pinned release, checked with `sha256sum -c` before it runs. | `tests/release.test.ts` |
+
 ## Data collection declaration (`extension/manifest.json`)
 
 | ID | Failure | Wanted result | How we check |

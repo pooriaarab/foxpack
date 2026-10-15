@@ -101,11 +101,17 @@ the tests, then the code. Commit in that order.
 ## Release
 
 `main` is staging and `release` is production. A push to `release` runs
-`.github/workflows/release.yml`. It refuses a version that has a tag, runs
-`pnpm ci:local`, publishes to npm with the `NPM_TOKEN` secret, then tags
-`v<version>` and creates a GitHub release.
+`.github/workflows/release.yml`, one job per step, each with its own
+permissions. `check` refuses a version that has a tag, runs
+`pnpm ci:local`, and passes the npm tarball, `dist/`, `dist-ext/` and
+`source.zip` on as an artifact. `e2e` runs `e2e/run.mjs` on that build on
+Ichabod (secret `ICHABOD_API_KEY`, cloudflared pinned by sha256). `npm`
+publishes the tarball with the `NPM_TOKEN` secret and provenance; it is
+the only job with `id-token: write`, and it installs nothing.
+`github-release` tags `v<version>` and creates a GitHub release; it is
+the only job with `contents: write`.
 
-After the npm publish, it submits `dist-ext/` to AMO as a listed add-on,
+After the npm publish, the `amo` job submits `dist-ext/` to AMO as a listed add-on,
 with the listing in `extension/amo-metadata.json`. AMO reviews the version
 before it signs it, so the GitHub release links to the listing and has no
 `.xpi`. It needs the secrets `AMO_JWT_ISSUER` and `AMO_JWT_SECRET`. Keep the
