@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><title>foxpack: bring your AI memory home</title><link rel="stylesheet" href="style.css"></head>
+<body>
+  <header><img class="mark" src="icons/icon-48.png" alt="" width="22" height="22"><h1>foxpack</h1></header>
+  <p class="note">Import your ChatGPT, Claude and Gemini exports. Firefox reads the files on this computer: nothing is uploaded. Then pick the memories you want to keep.</p>
+
+  <fieldset>
+    <legend>Import an export</legend>
+    <div class="row">
+      <select id="source" aria-label="Where the file comes from">
+        <option value="chatgpt">ChatGPT data export (.zip or conversations.json)</option>
+        <option value="claude">Claude data export (.zip or .json)</option>
+        <option value="gemini">Google Takeout, Gemini Apps (.zip or MyActivity.json)</option>
+        <option value="memories">Saved memories list (.txt, one per line)</option>
+      </select>
+    </div>
+    <label class="drop" id="drop">
+      <strong>Drop the file here, or click to choose it</strong>
+      <span class="note">Zip, JSON or text. Up to 256 MiB.</span>
+      <input id="file" type="file" accept=".zip,.json,.txt,.md,application/zip,application/json,text/plain">
+    </label>
+    <p id="status" role="status"></p>
+  </fieldset>
+
+  <h2>In your pack</h2>
+  <div id="counts"></div>
+
+  <h2>Memories to review</h2>
+  <div class="tabs" role="group" aria-label="Show">
+    <button class="small" data-view="pending" aria-pressed="true">Pending</button>
+    <button class="small" data-view="accepted" aria-pressed="false">Accepted</button>
+    <button class="small" data-view="rejected" aria-pressed="false">Rejected</button>
+  </div>
+  <ul id="review"></ul>
+
+  <fieldset>
+    <legend>Export</legend>
+    <p class="note">The export has your conversations and the memories you accepted. Rejected and pending ones stay out.</p>
+    <div class="row top">
+      <select id="format" aria-label="Format">
+        <option value="foxpack">foxpack JSON</option>
+        <option value="dti">DTI AI Conversation History JSON</option>
+        <option value="markdown">Markdown</option>
+      </select>
+      <button id="export" class="primary">Export</button>
+      <button id="clear" class="danger">Delete everything</button>
+    </div>
+  </fieldset>
+  <script src="import.js"></script>
+</body>
+</html>

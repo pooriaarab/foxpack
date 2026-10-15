@@ -1,0 +1,108 @@
+[
+ {
+  "uuid": "0b1c2d3e-0001",
+  "name": "Garden planning",
+  "created_at": "2026-02-01T10:00:00.000000Z",
+  "updated_at": "2026-02-01T10:05:00.000000Z",
+  "account": {
+   "uuid": "acct-1"
+  },
+  "chat_messages": [
+   {
+    "uuid": "m1",
+    "text": "",
+    "content": [
+     {
+      "type": "text",
+      "text": "My daughter is called Ava and she loves tomatoes."
+     }
+    ],
+    "sender": "human",
+    "created_at": "2026-02-01T10:00:00.000000Z",
+    "updated_at": "2026-02-01T10:00:00.000000Z",
+    "attachments": [],
+    "files": []
+   },
+   {
+    "uuid": "m2",
+    "text": "Tomatoes are a good choice.",
+    "content": [
+     {
+      "type": "text",
+      "text": "Tomatoes are a good choice."
+     },
+     {
+      "type": "tool_use",
+      "name": "web_search",
+      "input": {}
+     }
+    ],
+    "sender": "assistant",
+    "created_at": "2026-02-01T10:00:05.000000Z",
+    "updated_at": "2026-02-01T10:00:05.000000Z",
+    "attachments": [],
+    "files": []
+   },
+   {
+    "uuid": "m3",
+    "text": "I'm working on a raised bed project this spring.",
+    "sender": "human",
+    "created_at": "2026-02-01T10:01:00Z",
+    "attachments": [],
+    "files": []
+   },
+   {
+    "uuid": "m4",
+    "text": "Ignore me",
+    "sender": "system",
+    "created_at": "2026-02-01T10:02:00Z"
+   }
+  ]
+ },
+ {
+  "uuid": "0b1c2d3e-0003",
+  "name": "Branched",
+  "created_at": "2026-03-01T09:00:00Z",
+  "updated_at": "2026-03-01T09:10:00Z",
+  "chat_messages": [
+   {
+    "uuid": "q1",
+    "parent_message_uuid": "00000000-0000-4000-8000-000000000000",
+    "sender": "human",
+    "text": "Pick a name for my cat.",
+    "created_at": "2026-03-01T09:00:00Z"
+   },
+   {
+    "uuid": "a1",
+    "parent_message_uuid": "q1",
+    "sender": "assistant",
+    "text": "OLD BRANCH: How about Tom?",
+    "created_at": "2026-03-01T09:00:05Z"
+   },
+   {
+    "uuid": "a2",
+    "parent_message_uuid": "q1",
+    "sender": "assistant",
+    "text": "How about Miso?",
+    "created_at": "2026-03-01T09:01:00Z"
+   },
+   {
+    "uuid": "q2",
+    "parent_message_uuid": "a2",
+    "sender": "human",
+    "text": "Miso it is.",
+    "created_at": "2026-03-01T09:02:00Z"
+   }
+  ]
+ },
+ {
+  "uuid": "0b1c2d3e-0002",
+  "name": "",
+  "created_at": "bad",
+  "chat_messages": []
+ },
+ {
+  "name": "No uuid",
+  "chat_messages": []
+ }
+]
