@@ -9,6 +9,7 @@ const errorCode = (p: Promise<unknown>) => p.then(() => "no error", (e: unknown)
 const embedder = { embed: async (texts: string[]) => ({ model: "fixed-v1", vectors: texts.map(() => [1, 0]) }) };
 const foxmemory = () => createMemory({ store: memoryStore(), embedder });
 
+const say = (uuid: string, sender: string, text: string) => ({ uuid, sender, text, created_at: "2026-03-01T10:00:00Z" });
 const bigTurn = (i: number) => ({ uuid: `u${i}`, sender: "human", text: `${"We talked about the garden again. ".repeat(60)}I prefer red tomatoes number ${i}.`, created_at: "2026-03-01T10:00:00Z" });
 
 async function filled(memory?: MemorySink) {
@@ -86,7 +87,7 @@ describe("createPack", () => {
       uuid: "c1", name: "Family", created_at: "2026-03-01T10:00:00Z", updated_at: "2026-03-01T10:01:00Z",
       chat_messages: [
         { uuid: "u1", sender: "human", text: "Also, my sister Jane has epilepsy. I like green tea.", created_at: "2026-03-01T10:00:00Z" },
-        { uuid: "a1", sender: "assistant", text: "Noted that MY SISTER JANE HAS EPILEPSY. Green tea is nice.", created_at: "2026-03-01T10:00:05Z" },
+        { uuid: "a1", sender: "assistant", text: "Green tea is nice.", created_at: "2026-03-01T10:00:05Z" },
       ],
     }]);
     const { pack } = await filled();
@@ -102,12 +103,42 @@ describe("createPack", () => {
     };
     await gone();
     const messages = (await pack.conversations()).find((c) => c.id === "claude:c1")?.messages.map((m) => m.text);
-    expect(messages).toEqual(["[forgotten] I like green tea.", "Noted that [forgotten] Green tea is nice."]);
+    expect(messages).toEqual(["[forgotten] I like green tea.", "Green tea is nice."]);
     await pack.import("claude", chat);
     await gone();
     await pack.restore(backup);
     await gone();
     expect((await pack.memories({ query: "green tea" })).length).toBe(1);
+  });
+
+  it("K14: forget removes only the source sentences, also when the memory was edited to a short text", async () => {
+    const chat = JSON.stringify([
+      { uuid: "c1", name: "Family", created_at: "2026-03-01T10:00:00Z", chat_messages: [
+        say("u1", "human", "Then I said I live in Paris 🙂. I live in Paris. My friend Janet is a nurse `ok`. My sister Jane has epilepsy. I bike in the city."),
+        say("a1", "assistant", "You live in Paris, and I hope Jane is well. My sister Jane has epilepsy, you said."),
+      ] },
+      { uuid: "c2", name: "Bikes", created_at: "2026-03-02T10:00:00Z", chat_messages: [
+        say("u2", "human", "Janet and I ride bikes. I live in Paris. I like it here."),
+        say("a2", "assistant", "Is Janet in Paris too?"),
+      ] },
+    ]);
+    const store = inMemoryStore();
+    const pack = createPack({ store });
+    await pack.import("claude", chat);
+    const paris = (await pack.memories({ query: "i live in paris" }))[0];
+    const sister = (await pack.memories({ query: "epilepsy" }))[0];
+    expect([paris?.text, paris?.seenIn, sister?.text]).toEqual(["I live in Paris.", 2, "My sister Jane has epilepsy."]);
+    await pack.edit(paris?.id ?? "", "I");
+    await pack.edit(sister?.id ?? "", "Jane");
+    await pack.forget(paris?.id ?? "");
+    await pack.forget(sister?.id ?? "");
+    expect((await pack.conversations()).map((c) => [c.title, c.messages.map((m) => m.text)])).toEqual([
+      ["Family", [
+        "Then I said I live in Paris 🙂. [forgotten] My friend Janet is a nurse `ok`. [forgotten] I bike in the city.",
+        "You live in Paris, and I hope Jane is well. My sister Jane has epilepsy, you said.",
+      ]],
+      ["Bikes", ["Janet and I ride bikes. [forgotten] I like it here.", "Is Janet in Paris too?"]],
+    ]);
   });
 
   it("K12: a forget in one pack is not undone by a second pack on the same store", async () => {
