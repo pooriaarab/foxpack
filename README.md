@@ -104,7 +104,7 @@ No real user export was used in the tests. The fixtures follow the shapes in
 
 - **Three vendor exports and plain lists:** zip or JSON, found at any depth in the zip; see [coverage](#coverage).
 - **Candidates without a model:** fixed sentence patterns, a kind and a confidence, the source chat and date.
-- **Review that sticks:** accept, edit, reject and forget survive re-imports; forget deletes the text.
+- **Review that sticks:** accept, edit, reject and forget survive re-imports. Forget deletes the memory, and the sentence it came from in your imported chats.
 - **Exports:** foxpack JSON (reads back in), DTI JSON, Markdown; accepted memories only.
 - **Agents see accepted memories only:** SCENT and MCP never return a conversation or a pending candidate.
 
@@ -195,6 +195,7 @@ The add-on has the `storage` permission only, and no host permissions.
 - **Gemini has no conversation ids.** Entries are grouped by a chat link when the export has one, else each prompt is its own conversation.
 - **One JSON object.** The whole pack is read and written at once. Very large histories (hundreds of MB) are slow, and the 256 MiB cap stops larger files.
 - **Not encrypted.** The pack is plain JSON in your home folder or in Firefox storage.
+- **Forget matches words, not meaning.** It removes the sentence that gave the memory and each exact copy of it, also in a re-import. A reply that says the same thing in other words stays in the chat.
 - **ChatGPT memory writes are a history.** A memory you deleted in ChatGPT can still show up as a candidate.
 - **The extension does not use foxmemory.** A separate add-on cannot read foxpack's storage anyway; use the library with your own foxmemory to share memories.
 

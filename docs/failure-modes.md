@@ -71,6 +71,7 @@ trusts it, and never calls a network API to read it.
 | K8 | Two calls at the same time lose a write. | The calls of one pack run one after the other. | `tests/pack.test.ts` |
 | K9 | `search` with an empty query returns the whole pack. | It throws `bad_input`. Results are capped at `limit` (default 20). | `tests/pack.test.ts` |
 | K10 | Edits of an accepted memory are lost in foxmemory. | `edit` of an accepted memory calls `memory.update`. | `tests/pack.test.ts` |
+| K11 | `forget` clears the memory, but the sentence it came from stays in the conversations, so search, exports and a re-import still have it. | `forget` replaces each user sentence that gives this memory, and each copy of its text in any message, with `[forgotten]`. An import and a restore do the same for every forgotten id, so the text does not come back. A reply that says the same thing in other words stays. | `tests/pack.test.ts` |
 
 ## Export (`pack.export`)
 
