@@ -7,7 +7,7 @@ import { exportPack, type ExportOptions } from "./export.js";
 import { extractMemories, normalize, redact } from "./extract.js";
 import { FoxpackError } from "./errors.js";
 import { readExport, type ReadOptions } from "./read.js";
-import { SOURCES, type Conversation, type ImportRecord, type MemoryKind, type MemoryRecord, type MemoryStatus, type PackData, type Source } from "./types.js";
+import { MAX_MEMORY_TEXT, SOURCES, type Conversation, type ImportRecord, type MemoryKind, type MemoryRecord, type MemoryStatus, type PackData, type Source } from "./types.js";
 
 /** Where a pack is kept. `load` returns null when nothing is stored yet. */
 export interface PackStore {
@@ -72,7 +72,6 @@ export interface MemoryFilter {
   query?: string;
 }
 
-export const MAX_MEMORY_TEXT = 500;
 const MAX_IMPORTS = 100;
 
 export const emptyPack = (): PackData => ({ format: "foxpack/v1", conversations: [], memories: [], imports: [] });

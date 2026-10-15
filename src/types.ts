@@ -61,6 +61,9 @@ export interface Candidate {
   seenIn: number;
 }
 
+/** A memory text is 1 to this many characters, after trimming: in edit (K3) and in restore (E9). */
+export const MAX_MEMORY_TEXT = 500;
+
 export type MemoryStatus = "pending" | "accepted" | "rejected" | "forgotten";
 
 export interface MemoryRecord extends Candidate {
