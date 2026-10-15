@@ -1,0 +1,333 @@
+{
+  "startedAt": "2026-10-15T19:56:04.980Z",
+  "mode": "ichabod",
+  "checks": [
+    {
+      "name": "an empty pack shows zero counts",
+      "expected": {
+        "chatgpt": 0,
+        "claude": 0,
+        "gemini": 0,
+        "accepted": 0
+      },
+      "actual": {
+        "chatgpt": 0,
+        "claude": 0,
+        "gemini": 0,
+        "accepted": 0
+      },
+      "ok": true
+    },
+    {
+      "name": "each import reports what the Node library reports",
+      "expected": [
+        "ok: ChatGPT: 3 conversations and 5 new memories to review, 2 entries skipped.",
+        "ok: Claude: 3 conversations and 5 new memories to review, 3 entries skipped.",
+        "ok: Gemini: 2 conversations and 2 new memories to review, 3 entries skipped.",
+        "ok: Memory lists: 0 conversations and 6 new memories to review, 2 entries skipped."
+      ],
+      "actual": [
+        "ok: ChatGPT: 3 conversations and 5 new memories to review, 2 entries skipped.",
+        "ok: Claude: 3 conversations and 5 new memories to review, 3 entries skipped.",
+        "ok: Gemini: 2 conversations and 2 new memories to review, 3 entries skipped.",
+        "ok: Memory lists: 0 conversations and 6 new memories to review, 2 entries skipped."
+      ],
+      "ok": true
+    },
+    {
+      "name": "the counts per source",
+      "expected": {
+        "chatgpt": 3,
+        "claude": 3,
+        "gemini": 2,
+        "accepted": 0
+      },
+      "actual": {
+        "chatgpt": 3,
+        "claude": 3,
+        "gemini": 2,
+        "accepted": 0
+      },
+      "ok": true
+    },
+    {
+      "name": "a wrong file shows an error",
+      "expected": true,
+      "actual": true,
+      "ok": true
+    },
+    {
+      "name": "a wrong file changes no count",
+      "expected": {
+        "chatgpt": 3,
+        "claude": 3,
+        "gemini": 2,
+        "accepted": 0
+      },
+      "actual": {
+        "chatgpt": 3,
+        "claude": 3,
+        "gemini": 2,
+        "accepted": 0
+      },
+      "ok": true
+    },
+    {
+      "name": "the page lists the same candidates as the Node library",
+      "expected": [
+        "Call me Sam.",
+        "Has a daughter named Ava.",
+        "Has a dog named Miso.",
+        "I prefer aisle seats.",
+        "I'm a nurse on night shifts.",
+        "I'm a product designer in Vancouver.",
+        "I'm allergic to shellfish, so skip seafood places.",
+        "I'm working on a raised bed project this spring.",
+        "Is building a budgeting app called Penny.",
+        "Is vegetarian.",
+        "Lives in Vancouver.",
+        "My daughter is called Ava and she loves tomatoes.",
+        "My favorite color is green.",
+        "Prefers TypeScript over Python.",
+        "Prefers concise answers with code first.",
+        "Sam is a product designer who prefers short answers. Sam is building a garden planner app.",
+        "User prefers aisle seats.",
+        "Works as a nurse on night shifts."
+      ],
+      "actual": [
+        "Call me Sam.",
+        "Has a daughter named Ava.",
+        "Has a dog named Miso.",
+        "I prefer aisle seats.",
+        "I'm a nurse on night shifts.",
+        "I'm a product designer in Vancouver.",
+        "I'm allergic to shellfish, so skip seafood places.",
+        "I'm working on a raised bed project this spring.",
+        "Is building a budgeting app called Penny.",
+        "Is vegetarian.",
+        "Lives in Vancouver.",
+        "My daughter is called Ava and she loves tomatoes.",
+        "My favorite color is green.",
+        "Prefers TypeScript over Python.",
+        "Prefers concise answers with code first.",
+        "Sam is a product designer who prefers short answers. Sam is building a garden planner app.",
+        "User prefers aisle seats.",
+        "Works as a nurse on night shifts."
+      ],
+      "ok": true
+    },
+    {
+      "name": "after a reload the tabs count the decisions",
+      "expected": [
+        "Pending (15)",
+        "Accepted (2)",
+        "Rejected (1)"
+      ],
+      "actual": [
+        "Pending (15)",
+        "Accepted (2)",
+        "Rejected (1)"
+      ],
+      "ok": true
+    },
+    {
+      "name": "after a reload the accepted ones are kept",
+      "expected": [
+        "Call me Sam.",
+        "I'm allergic to shellfish, so skip seafood places."
+      ],
+      "actual": [
+        "Call me Sam.",
+        "I'm allergic to shellfish, so skip seafood places."
+      ],
+      "ok": true
+    },
+    {
+      "name": "after a reload the rejected one is kept",
+      "expected": [
+        "Sam is a product designer who prefers short answers. Sam is building a garden planner app."
+      ],
+      "actual": [
+        "Sam is a product designer who prefers short answers. Sam is building a garden planner app."
+      ],
+      "ok": true
+    },
+    {
+      "name": "the kept count",
+      "expected": 2,
+      "actual": 2,
+      "ok": true
+    },
+    {
+      "name": "the other tab draws the forget",
+      "expected": 1,
+      "actual": 1,
+      "ok": true
+    },
+    {
+      "name": "a forget in one tab stays after an accept in another",
+      "expected": [
+        [
+          "accepted",
+          "Has a daughter named Ava."
+        ],
+        [
+          "forgotten",
+          ""
+        ]
+      ],
+      "actual": [
+        [
+          "accepted",
+          "Has a daughter named Ava."
+        ],
+        [
+          "forgotten",
+          ""
+        ]
+      ],
+      "ok": true
+    },
+    {
+      "name": "the export is a foxpack file",
+      "expected": [
+        "foxpack/v1",
+        true
+      ],
+      "actual": [
+        "foxpack/v1",
+        true
+      ],
+      "ok": true
+    },
+    {
+      "name": "the export has the accepted memories",
+      "expected": [
+        "Call me Sam.",
+        "Has a daughter named Ava."
+      ],
+      "actual": [
+        "Call me Sam.",
+        "Has a daughter named Ava."
+      ],
+      "ok": true
+    },
+    {
+      "name": "the export has no trace of the forgotten memory",
+      "expected": false,
+      "actual": false,
+      "ok": true
+    },
+    {
+      "name": "the export has no rejected or pending memory",
+      "expected": true,
+      "actual": true,
+      "ok": true
+    },
+    {
+      "name": "the export has the conversations",
+      "expected": 8,
+      "actual": 8,
+      "ok": true
+    },
+    {
+      "name": "foxscope lists the fields; conversations are private",
+      "expected": "private",
+      "actual": "private",
+      "ok": true
+    },
+    {
+      "name": "foxscope reads the accepted memories only, and no conversations",
+      "expected": [
+        "Call me Sam.",
+        "Has a daughter named Ava."
+      ],
+      "actual": [
+        "Call me Sam.",
+        "Has a daughter named Ava."
+      ],
+      "ok": true
+    },
+    {
+      "name": "foxscope gets no memory.conversations key",
+      "expected": false,
+      "actual": false,
+      "ok": true
+    },
+    {
+      "name": "a missing add-on gives an error",
+      "expected": false,
+      "actual": false,
+      "ok": true
+    },
+    {
+      "name": "a stranger gets the same error as for a missing add-on",
+      "expected": [
+        {
+          "ok": false,
+          "error": "Could not establish connection. Receiving end does not exist."
+        },
+        {
+          "ok": false,
+          "error": "Could not establish connection. Receiving end does not exist."
+        }
+      ],
+      "actual": [
+        {
+          "ok": false,
+          "error": "Could not establish connection. Receiving end does not exist."
+        },
+        {
+          "ok": false,
+          "error": "Could not establish connection. Receiving end does not exist."
+        }
+      ],
+      "ok": true
+    },
+    {
+      "name": "the popup counts the pack",
+      "expected": {
+        "conversations": 8,
+        "pending": 14,
+        "accepted": 2
+      },
+      "actual": {
+        "conversations": 8,
+        "pending": 14,
+        "accepted": 2
+      },
+      "ok": true
+    },
+    {
+      "name": "the popup lists the foxscope read",
+      "expected": true,
+      "actual": true,
+      "ok": true
+    }
+  ],
+  "firefox": "firefox/158.0",
+  "stranger": [
+    {
+      "ok": false,
+      "error": "Could not establish connection. Receiving end does not exist."
+    },
+    {
+      "ok": false,
+      "error": "Could not establish connection. Receiving end does not exist."
+    }
+  ],
+  "absent": {
+    "ok": false,
+    "error": "Could not establish connection. Receiving end does not exist."
+  },
+  "passed": true,
+  "ichabod": [
+    {
+      "service": "ichabod",
+      "sessionId": "c57ae3c0-8853-4296-8857-16214f7c422f",
+      "firefox": "firefox/158.0",
+      "recorded": true,
+      "startedAt": "2026-10-15T19:56:11.573Z"
+    }
+  ]
+}

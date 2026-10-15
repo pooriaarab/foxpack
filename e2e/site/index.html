@@ -1,0 +1,20 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>foxpack E2E: other extensions ask for memories</title>
+    <link rel="stylesheet" href="site.css" />
+  </head>
+  <body>
+    <h1>Two extensions ask foxpack for memories</h1>
+    <p>The E2E installs two stand-in extensions next to foxpack. Each one has a content script on this page. One has the id <code>foxscope@pooriaarab</code>; the other has a stranger's id. foxpack must answer the first, and give the second the same error as an add-on that is not installed.</p>
+    <section>
+      <h2>foxscope@pooriaarab</h2>
+      <pre id="foxscope">Waiting for the test.</pre>
+    </section>
+    <section>
+      <h2>stranger@example.com</h2>
+      <pre id="stranger">Waiting for the test.</pre>
+    </section>
+  </body>
+</html>
