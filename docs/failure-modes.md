@@ -36,7 +36,7 @@ trusts it, and never calls a network API to read it.
 | # | Failure mode | Wanted behavior | Test |
 |---|---|---|---|
 | Z1 | The zip is corrupt or cut short. | `readExport` throws `FoxpackError` with code `corrupt_zip`. Nothing is stored. | `tests/zip.test.ts` |
-| Z2 | The zip is a zip bomb: a small file that inflates to gigabytes, or a header that lies about the size. | Bytes are counted while they inflate. Past `maxBytes` (default 256 MiB) it stops with `too_large`. | `tests/zip.test.ts` |
+| Z2 | The zip is a zip bomb: a small file that inflates to gigabytes, or a header that lies about the size. | The declared sizes of the needed files are added up before anything inflates. Past `maxBytes` (default 256 MiB) it stops with `too_large`. Each file inflates into a buffer of its declared size, so a header that lies gives a cut file, which fails as `bad_export`. | `tests/zip.test.ts` |
 | Z3 | The zip has no `conversations.json` (a wrong zip, or a Takeout zip without Gemini). | It throws `bad_export` and names the file it looked for. | `tests/zip.test.ts` |
 | Z4 | The export file is in a folder in the zip (`Takeout/My Activity/Gemini Apps/MyActivity.json`). | The file is found by its name at any depth. | `tests/zip.test.ts` |
 | Z5 | A ChatGPT zip holds `conversations.json` and other big files (images, audio). | Only the needed JSON files are inflated. The others are skipped unread. | `tests/zip.test.ts` |
