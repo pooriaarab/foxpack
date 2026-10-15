@@ -80,12 +80,50 @@ export function classify(text: string): MemoryKind {
   return "fact";
 }
 
-/** Sentences of one user turn, with code removed (X4). */
-function sentences(text: string): string[] {
-  if (text.length > MAX_TURN_CHARS) return [];
-  const prose = text.replace(/```[\s\S]*?(?:```|$)/g, " ").replace(/`[^`\n]*`/g, " ").replace(/[’‘]/g, "'");
-  return prose.split(/(?<=[.!?])\s+|\n+/).map((s) => s.trim()).filter(Boolean);
+/** A sentence of a user turn, and where it is in the turn's text: `text.slice(start, end)`. */
+interface Span {
+  sentence: string;
+  start: number;
+  end: number;
 }
+
+/** Replaces each match with one space, and keeps for each character left its index in the text. */
+function strip(text: string, at: readonly number[], pattern: RegExp): [string, number[]] {
+  let out = "";
+  const map: number[] = [];
+  let last = 0;
+  for (const match of text.matchAll(pattern)) {
+    out += `${text.slice(last, match.index)} `;
+    map.push(...at.slice(last, match.index), at[match.index] ?? 0);
+    last = match.index + match[0].length;
+  }
+  map.push(...at.slice(last));
+  return [out + text.slice(last), map];
+}
+
+/** Sentences of one user turn, with code removed (X4), and their spans in the turn. */
+function spans(text: string): Span[] {
+  if (text.length > MAX_TURN_CHARS) return [];
+  let [prose, at] = strip(text, Array.from({ length: text.length }, (_, i) => i), /```[\s\S]*?(?:```|$)/g);
+  [prose, at] = strip(prose, at, /`[^`\n]*`/g);
+  prose = prose.replace(/[’‘]/g, "'"); // one character for one
+  const found: Span[] = [];
+  const add = (from: number, to: number) => {
+    const raw = prose.slice(from, to);
+    const sentence = raw.trim();
+    const first = from + raw.length - raw.trimStart().length;
+    if (sentence) found.push({ sentence, start: at[first] ?? 0, end: (at[first + sentence.length - 1] ?? 0) + 1 });
+  };
+  let from = 0;
+  for (const gap of prose.matchAll(/(?<=[.!?])\s+|\n+/g)) {
+    add(from, gap.index);
+    from = gap.index + gap[0].length;
+  }
+  add(from, prose.length);
+  return found;
+}
+
+const sentences = (text: string) => spans(text).map((s) => s.sentence);
 
 function asCandidate(sentence: string): { text: string; kind: MemoryKind; base: number } | null {
   let s = sentence.replace(/^["'([]+|["')\]]+$/g, "");
@@ -103,37 +141,28 @@ function asCandidate(sentence: string): { text: string; kind: MemoryKind; base: 
 /** What a forgotten sentence becomes in a conversation (K11). */
 export const FORGOTTEN = "[forgotten]";
 
-const escapeRegExp = (text: string) => text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-
 /**
- * Removes forgotten memories from conversations (K11): each user sentence
- * whose candidate id is in `ids`, and each copy of its candidate text or of
- * one of `texts` in any message, any case, becomes "[forgotten]". So an
- * assistant reply that repeats the sentence goes too, also in a re-import
- * where only the id is left. Conversations with nothing to remove are
- * returned as they are.
+ * Removes forgotten memories from conversations (K11, K14). The source of
+ * a memory is each user sentence whose candidate id is in `ids`: the id is
+ * a hash of that sentence. Each such sentence, and nothing else, becomes
+ * "[forgotten]". Nothing searches for a memory's text, so an edit to a
+ * short text ("I") cannot reach other words. Conversations with nothing
+ * to remove are returned as they are.
  */
-export function redact(conversations: readonly Conversation[], ids: ReadonlySet<string>, texts: readonly string[] = []): Conversation[] {
-  const hits = (m: Message) => (m.role === "user" && ids.size > 0 ? sentences(m.text).flatMap((sentence) => {
+export function redact(conversations: readonly Conversation[], ids: ReadonlySet<string>): Conversation[] {
+  if (ids.size === 0) return [...conversations];
+  const source = ({ sentence }: Span) => {
     const hit = asCandidate(sentence);
-    return hit && ids.has(candidateId(hit.kind, hit.text)) ? [{ sentence, text: hit.text }] : [];
-  }) : []);
-  const found = new Set(texts.map((t) => t.trim()).filter(Boolean));
-  for (const c of conversations) for (const m of c.messages) for (const h of hits(m)) found.add(h.text);
-  if (found.size === 0) return [...conversations];
-  const copies = [...found].map((t) => new RegExp(escapeRegExp(t), "gi"));
+    return hit !== null && ids.has(candidateId(hit.kind, hit.text));
+  };
   return conversations.map((c) => {
     let changed = false;
-    const messages = c.messages.map((m) => {
-      let text = m.text;
-      for (const { sentence } of hits(m)) {
-        // sentences() turns curly quotes into straight ones, one character for one.
-        const at = text.replace(/[’‘]/g, "'").indexOf(sentence);
-        if (at >= 0) text = `${text.slice(0, at)}${FORGOTTEN}${text.slice(at + sentence.length)}`;
-      }
-      for (const copy of copies) text = text.replace(copy, FORGOTTEN);
-      if (text === m.text) return m;
+    const messages = c.messages.map((m): Message => {
+      const gone = m.role === "user" ? spans(m.text).filter(source) : [];
+      if (gone.length === 0) return m;
       changed = true;
+      let text = m.text;
+      for (const { start, end } of gone.toReversed()) text = `${text.slice(0, start)}${FORGOTTEN}${text.slice(end)}`;
       return { ...m, text };
     });
     return changed ? { ...c, messages } : c;
