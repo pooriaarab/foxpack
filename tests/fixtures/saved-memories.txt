@@ -1,0 +1,11 @@
+Saved memories:
+- Prefers concise answers with code first.
+* Is vegetarian.
+• Has a dog named Miso.
+1. Is building a budgeting app called Penny.
+2) Lives in Vancouver.
+
+## Work
+[x] Works as a nurse on night shifts.
+- Prefers concise answers with code first.
+
