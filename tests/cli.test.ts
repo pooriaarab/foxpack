@@ -71,6 +71,21 @@ describe("foxpack CLI", () => {
     expect(readFileSync(join(home, "pack.json"), "utf8")).toBe(before);
   });
 
+  it("C4: a confidence that is not a number from 0 to 1 is corrupt_store", async () => {
+    const { cli, file, home } = setup();
+    await cli("import", "memories", file("m.txt", "- Likes tea and toast."));
+    await cli("accept", (await cli("memories", "--pending")).out.split("  ")[0] ?? "");
+    const good = JSON.parse(readFileSync(join(home, "pack.json"), "utf8"));
+    for (const confidence of ["high", null, 2, -0.5]) {
+      writeFileSync(join(home, "pack.json"), JSON.stringify({ ...good, memories: [{ ...good.memories[0], confidence }] }));
+      for (const args of [["memories"], ["stats"]]) {
+        const r = await cli(...args);
+        expect(r).toMatchObject({ code: 1, out: "" });
+        expect(r.err).toMatch(/^foxpack: corrupt_store: .*confidence/);
+      }
+    }
+  });
+
   it("C3: export writes only the export to stdout", async () => {
     const { cli, file } = setup();
     await cli("import", "memories", file("m.txt", "- Likes tea and toast."));
