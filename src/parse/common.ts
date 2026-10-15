@@ -14,7 +14,7 @@ export const isObject = (value: unknown): value is Json => typeof value === "obj
 export function readJson(contents: unknown, source: Source): unknown {
   if (typeof contents !== "string") return contents;
   try {
-    return JSON.parse(contents.replace(/^﻿/, ""));
+    return JSON.parse(contents.replace(/^\uFEFF/, ""));
   } catch {
     throw new FoxpackError("bad_export", `The ${source} file is not JSON.`);
   }

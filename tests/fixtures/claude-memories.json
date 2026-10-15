@@ -1,0 +1,9 @@
+[
+ {
+  "conversations_memory": "**Work context**\n\nSam is a product designer who prefers short answers. Sam is building a garden planner app.\n\n**Personal context**\n- Has a daughter named Ava.",
+  "project_memories": {
+   "proj-1": "Prefers TypeScript over Python."
+  },
+  "account_uuid": "acct-1"
+ }
+]

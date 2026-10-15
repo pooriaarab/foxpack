@@ -1,6 +1,6 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-import { FoxpackError, htmlToText, parseChatGPT, parseClaude, parseGemini, parseSavedMemories } from "../src/index.js";
+import { FoxpackError, htmlToText, parseChatGPT, parseClaude, parseClaudeMemories, parseGemini, parseSavedMemories } from "../src/index.js";
 
 const fixture = (name: string) => readFileSync(new URL(`./fixtures/${name}`, import.meta.url), "utf8");
 const code = (fn: () => unknown) => {
@@ -26,7 +26,7 @@ describe("parseChatGPT", () => {
   });
 
   it("P2: skips a broken conversation and keeps the others", () => {
-    expect(parsed.conversations.map((c) => c.id)).toEqual(["chatgpt:6795a1b2-0001", "chatgpt:6795a1b2-0002"]);
+    expect(parsed.conversations.map((c) => c.id)).toEqual(["chatgpt:6795a1b2-0001", "chatgpt:6795a1b2-0002", "chatgpt:custom-instructions"]);
     expect(parsed.skipped).toBe(2);
   });
 
@@ -70,6 +70,31 @@ describe("parseChatGPT", () => {
     const huge = "a".repeat(30_000);
     const [c] = parseChatGPT([{ conversation_id: "x", current_node: "a", mapping: { a: { id: "a", parent: null, message: { id: "a", author: { role: "user" }, content: { content_type: "text", parts: [huge] } } } } }]).conversations;
     expect(c?.messages[0]?.text.length).toBe(20_001);
+  });
+});
+
+describe("memories inside exports", () => {
+  it("P16: reads ChatGPT memory writes (bio) from every branch, with their chat and date", () => {
+    expect(parseChatGPT(fixture("chatgpt-conversations.json")).savedMemories).toEqual([
+      { text: "User prefers aisle seats.", conversationId: "chatgpt:6795a1b2-0001", date: "2026-01-01T00:00:05.500Z" },
+    ]);
+  });
+
+  it("P17: turns custom instructions into one user message, once", () => {
+    const about = parseChatGPT(fixture("chatgpt-conversations.json")).conversations.at(-1);
+    expect(about?.messages.map((m) => [m.role, m.text])).toEqual([["user", "I'm a product designer in Vancouver."]]);
+  });
+
+  it("P18: reads Claude memories.json: headings skipped, prose split into sentences", () => {
+    const parsed = parseClaudeMemories(fixture("claude-memories.json"));
+    expect(parsed.savedMemories.map((m) => m.text)).toEqual(["Sam is a product designer who prefers short answers. Sam is building a garden planner app.", "Has a daughter named Ava.", "Prefers TypeScript over Python."]);
+    expect(parsed.skipped).toBe(2);
+    expect(code(() => parseClaudeMemories({}))).toBe("bad_export");
+  });
+
+  it("P18: splits a paragraph longer than 200 characters into sentences", () => {
+    const long = `${"Likes long walks on the beach at dawn. ".repeat(6)}Owns a red bike.`;
+    expect(parseSavedMemories(long).savedMemories.map((m) => m.text)).toEqual(["Likes long walks on the beach at dawn.", "Owns a red bike."]);
   });
 });
 
