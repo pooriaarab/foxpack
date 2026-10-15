@@ -100,9 +100,9 @@ trusts it, and never calls a network API to read it.
 
 | # | Failure mode | Wanted behavior | Test |
 |---|---|---|---|
-| N1 | A crash during a write leaves a half-written `pack.json`. | Writes go to a temp file in the same folder, then rename. | `tests/node.test.ts` |
+| N1 | A crash or a power cut during a write leaves a half-written or empty `pack.json`. | Writes go to a temp file in the same folder, which is flushed to disk (fsync) before the rename, and the folder is flushed after it. | `tests/node.test.ts` |
 | N2 | `FOXPACK_HOME` is not set and the home folder does not exist. | The default is `~/.foxpack/pack.json`. The folder is made with mode 0700, the file with 0600. | `tests/node.test.ts` |
-| N3 | Two CLI processes write the pack at the same time. | A lock file next to `pack.json` keeps writers apart, over the whole read, change and write. A second writer waits, then fails with `locked`. A lock from a dead process (older than 30 s) is taken over. | `tests/node.test.ts` |
+| N3 | Two CLI processes write the pack at the same time, or a waiting writer takes the lock from a slow import that is still running. | A lock file next to `pack.json`, with the holder's pid, keeps writers apart over the whole read, change and write. A second writer waits, then fails with `locked`. The lock is taken over only when its pid is not a running process, or when it has no pid and is older than 30 s. A live holder keeps it however long it takes. | `tests/node.test.ts` |
 | C1 | A command or a source name is wrong. | The CLI prints the usage to stderr and exits 2. | `tests/cli.test.ts` |
 | C2 | An import fails (bad file, corrupt zip). | The CLI prints one line with the code and the reason to stderr, and exits 1. The store does not change. | `tests/cli.test.ts` |
 | C3 | `export` writes binary or log text to stdout and breaks a pipe to a file. | Only the export goes to stdout. Messages go to stderr. | `tests/cli.test.ts` |
