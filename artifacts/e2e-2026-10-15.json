@@ -1,5 +1,5 @@
 {
-  "startedAt": "2026-10-15T16:37:24.231Z",
+  "startedAt": "2026-10-15T19:24:35.088Z",
   "mode": "ichabod",
   "checks": [
     {
@@ -159,6 +159,36 @@
       "ok": true
     },
     {
+      "name": "the other tab draws the forget",
+      "expected": 1,
+      "actual": 1,
+      "ok": true
+    },
+    {
+      "name": "a forget in one tab stays after an accept in another",
+      "expected": [
+        [
+          "accepted",
+          "Has a daughter named Ava."
+        ],
+        [
+          "forgotten",
+          ""
+        ]
+      ],
+      "actual": [
+        [
+          "accepted",
+          "Has a daughter named Ava."
+        ],
+        [
+          "forgotten",
+          ""
+        ]
+      ],
+      "ok": true
+    },
+    {
       "name": "the export is a foxpack file",
       "expected": [
         "foxpack/v1",
@@ -174,12 +204,18 @@
       "name": "the export has the accepted memories",
       "expected": [
         "Call me Sam.",
-        "I'm allergic to shellfish, so skip seafood places."
+        "Has a daughter named Ava."
       ],
       "actual": [
         "Call me Sam.",
-        "I'm allergic to shellfish, so skip seafood places."
+        "Has a daughter named Ava."
       ],
+      "ok": true
+    },
+    {
+      "name": "the export has no trace of the forgotten memory",
+      "expected": false,
+      "actual": false,
       "ok": true
     },
     {
@@ -204,11 +240,11 @@
       "name": "foxscope reads the accepted memories only, and no conversations",
       "expected": [
         "Call me Sam.",
-        "I'm allergic to shellfish, so skip seafood places."
+        "Has a daughter named Ava."
       ],
       "actual": [
         "Call me Sam.",
-        "I'm allergic to shellfish, so skip seafood places."
+        "Has a daughter named Ava."
       ],
       "ok": true
     },
@@ -219,21 +255,45 @@
       "ok": true
     },
     {
-      "name": "a stranger extension gets nothing",
-      "expected": true,
-      "actual": true,
+      "name": "a missing add-on gives an error",
+      "expected": false,
+      "actual": false,
+      "ok": true
+    },
+    {
+      "name": "a stranger gets the same error as for a missing add-on",
+      "expected": [
+        {
+          "ok": false,
+          "error": "Could not establish connection. Receiving end does not exist."
+        },
+        {
+          "ok": false,
+          "error": "Could not establish connection. Receiving end does not exist."
+        }
+      ],
+      "actual": [
+        {
+          "ok": false,
+          "error": "Could not establish connection. Receiving end does not exist."
+        },
+        {
+          "ok": false,
+          "error": "Could not establish connection. Receiving end does not exist."
+        }
+      ],
       "ok": true
     },
     {
       "name": "the popup counts the pack",
       "expected": {
         "conversations": 8,
-        "pending": 15,
+        "pending": 14,
         "accepted": 2
       },
       "actual": {
         "conversations": 8,
-        "pending": 15,
+        "pending": 14,
         "accepted": 2
       },
       "ok": true
@@ -245,18 +305,29 @@
       "ok": true
     }
   ],
-  "firefox": "firefox/157.0.1",
-  "stranger": {
-    "ok": true
+  "firefox": "firefox/158.0",
+  "stranger": [
+    {
+      "ok": false,
+      "error": "Could not establish connection. Receiving end does not exist."
+    },
+    {
+      "ok": false,
+      "error": "Could not establish connection. Receiving end does not exist."
+    }
+  ],
+  "absent": {
+    "ok": false,
+    "error": "Could not establish connection. Receiving end does not exist."
   },
   "passed": true,
   "ichabod": [
     {
       "service": "ichabod",
-      "sessionId": "201bf4cc-8b1a-4af8-979c-8526074b40ef",
-      "firefox": "firefox/157.0.1",
+      "sessionId": "f64ca283-0388-43e0-871c-bf24dd8810c8",
+      "firefox": "firefox/158.0",
       "recorded": true,
-      "startedAt": "2026-10-15T16:37:30.810Z"
+      "startedAt": "2026-10-15T19:26:17.923Z"
     }
   ]
 }
