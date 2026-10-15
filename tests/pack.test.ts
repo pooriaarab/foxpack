@@ -79,6 +79,35 @@ describe("createPack", () => {
     expect(await memory.list()).toEqual([]);
   });
 
+  it("K11: forget deletes the sentence from the conversations, also after a re-import and a restore", async () => {
+    const chat = JSON.stringify([{
+      uuid: "c1", name: "Family", created_at: "2026-03-01T10:00:00Z", updated_at: "2026-03-01T10:01:00Z",
+      chat_messages: [
+        { uuid: "u1", sender: "human", text: "Also, my sister Jane has epilepsy. I like green tea.", created_at: "2026-03-01T10:00:00Z" },
+        { uuid: "a1", sender: "assistant", text: "Noted that MY SISTER JANE HAS EPILEPSY. Green tea is nice.", created_at: "2026-03-01T10:00:05Z" },
+      ],
+    }]);
+    const { pack } = await filled();
+    await pack.import("claude", chat);
+    const sister = (await pack.memories({ query: "epilepsy" }))[0];
+    const backup = await pack.export({ format: "foxpack" });
+    await pack.accept(sister?.id ?? "");
+    await pack.forget(sister?.id ?? "");
+    const gone = async () => {
+      expect(await pack.search("epilepsy")).toEqual([]);
+      expect(JSON.stringify(await pack.data())).not.toMatch(/epilepsy/i);
+      for (const format of ["foxpack", "dti", "markdown"] as const) expect(await pack.export({ format })).not.toMatch(/epilepsy/i);
+    };
+    await gone();
+    const messages = (await pack.conversations()).find((c) => c.id === "claude:c1")?.messages.map((m) => m.text);
+    expect(messages).toEqual(["[forgotten] I like green tea.", "Noted that [forgotten] Green tea is nice."]);
+    await pack.import("claude", chat);
+    await gone();
+    await pack.restore(backup);
+    await gone();
+    expect((await pack.memories({ query: "green tea" })).length).toBe(1);
+  });
+
   it("K5: when foxmemory fails, the candidate stays pending", async () => {
     const broken: MemorySink = { remember: async () => Promise.reject(new Error("disk full")), update: async () => undefined, forget: async () => true };
     const { pack } = await filled(broken);
