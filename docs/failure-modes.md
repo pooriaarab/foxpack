@@ -81,6 +81,7 @@ trusts it, and never calls a network API to read it.
 | E3 | An export cannot be read back in. | A `foxpack` export imports into an empty pack with the same conversations and accepted memories. | `tests/export.test.ts` |
 | E4 | An unknown format is asked for. | It throws `bad_input` and lists the formats. | `tests/export.test.ts` |
 | E5 | A restore file is nested very deep (an array 5000 levels down, in any field). | `restore` throws `bad_export` before it parses: a foxpack file is never more than 16 levels deep. No `RangeError` escapes, and nothing is saved. | `tests/export.test.ts` |
+| E6 | An export carries text the user removed: the `originalText` of an edited memory, or another field that only the local store needs (`foxmemoryId`). | An exported memory has only `id`, `text`, `kind`, `confidence`, `source`, `conversationId`, `date`, `seenIn`, `status` and `decidedAt`. A conversation has only its documented fields. `restore` sets `originalText` to the text it reads. | `tests/export.test.ts` |
 
 ## SCENT resolver (`memoryResolver`)
 
