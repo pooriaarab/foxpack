@@ -121,7 +121,7 @@ No real user export was used in the tests. The fixtures follow the shapes in
 | `memoryResolver(pack)` | A SCENT v0.1 resolver for the `memory` namespace. |
 | `exportPack(data, options)`, `toDti(conversation, at)` | The export functions that `pack.export` uses. |
 | `inMemoryStore()`, `storageStore(browser.storage.local)` | Stores for tests and for an extension. |
-| `scentListener(storage)` | The `runtime.onMessageExternal` listener: answers `foxscope@pooriaarab` only. |
+| `scentListener(storage)` | The `runtime.onMessageExternal` listener: answers `foxscope@pooriaarab` only. Any other sender gets the error of an add-on that is not installed. |
 | `FoxpackError` | Every failure. `code` is `bad_input`, `bad_export`, `corrupt_zip`, `too_large`, `not_found`, `corrupt_store` or `locked`. |
 
 A pack has these methods. They run one at a time.
