@@ -2,7 +2,7 @@
 // Node callers. In Node, `import("foxpack")` gives this entry too, so
 // `memoryResolver()` with no argument reads ~/.foxpack/pack.json.
 import { randomBytes } from "node:crypto";
-import { mkdir, open, readFile, rename, rm, stat, writeFile } from "node:fs/promises";
+import { link, mkdir, open, readFile, rename, rm, stat } from "node:fs/promises";
 import { homedir } from "node:os";
 import { dirname, join } from "node:path";
 import { FoxpackError } from "./errors.js";
@@ -21,12 +21,40 @@ export function packPath(env: Record<string, string | undefined> = process.env):
 export interface FileStoreOptions {
   /** How long a writer waits for the lock. Default 5000 ms. */
   waitMs?: number;
-  /** A lock older than this is from a dead process and is taken over. Default 30000 ms. */
+  /**
+   * A lock file with no pid in it (its writer died before it wrote one) is
+   * taken over when it is older than this. Default 30000 ms. A lock with a
+   * pid is taken over only when that process is gone.
+   */
   staleMs?: number;
 }
 
 export interface FileStore extends PackStore {
   readonly path: string;
+}
+
+/** Is a process with this pid running? EPERM means it runs as another user. */
+function alive(pid: number): boolean {
+  try {
+    process.kill(pid, 0);
+    return true;
+  } catch (error) {
+    return isCode(error, "EPERM");
+  }
+}
+
+/** The holder of a lock file: its pid, or null when the file has none. */
+const holder = (file: string) => readFile(file, "utf8").then((text) => (/^\d+\n$/.test(text) ? Number(text) : null), () => null);
+
+/** Flushes a folder, so a rename in it is on disk. Windows cannot open a folder, and does not need it. */
+async function syncFolder(folder: string) {
+  if (process.platform === "win32") return;
+  const handle = await open(folder, "r");
+  try {
+    await handle.sync();
+  } finally {
+    await handle.close();
+  }
 }
 
 const sleep = (ms: number) => new Promise((done) => setTimeout(done, ms));
@@ -38,6 +66,32 @@ export function fileStore(path: string = packPath(), options: FileStoreOptions =
   const waitMs = options.waitMs ?? 5000;
   const staleMs = options.staleMs ?? 30_000;
   let held = 0;
+
+  /** Is the lock at `file` free to take: its pid is gone, or it has no pid and is old (N3)? */
+  async function abandoned(file: string): Promise<boolean> {
+    const pid = await holder(file);
+    if (pid !== null) return !alive(pid);
+    return stat(file).then((s) => Date.now() - s.mtimeMs > staleMs, () => false);
+  }
+
+  /**
+   * Removes an abandoned lock. It moves the file away first, so of two
+   * waiters only one gets it, then checks what it moved: when another
+   * waiter has taken the lock meanwhile, it puts that lock back.
+   */
+  async function takeOver(): Promise<boolean> {
+    if (!(await abandoned(lockPath))) return false;
+    const moved = `${lockPath}.${process.pid}.${randomBytes(4).toString("hex")}.old`;
+    try {
+      await rename(lockPath, moved);
+    } catch (error) {
+      if (isCode(error, "ENOENT")) return true;
+      throw error;
+    }
+    if (!(await abandoned(moved))) await link(moved, lockPath).catch(() => undefined);
+    await rm(moved, { force: true });
+    return true;
+  }
 
   async function acquire() {
     await mkdir(dirname(path), { recursive: true, mode: 0o700 });
@@ -51,9 +105,8 @@ export function fileStore(path: string = packPath(), options: FileStoreOptions =
       } catch (error) {
         if (!isCode(error, "EEXIST")) throw error;
       }
-      const age = await stat(lockPath).then((s) => Date.now() - s.mtimeMs, () => 0);
-      if (age > staleMs) await rm(lockPath, { force: true });
-      else if (Date.now() > deadline) throw new FoxpackError("locked", `Another foxpack process is writing ${path}. Try again when it is done, or delete ${lockPath} if no foxpack runs.`);
+      if (await takeOver()) continue;
+      if (Date.now() > deadline) throw new FoxpackError("locked", `Another foxpack process is writing ${path}. Try again when it is done, or delete ${lockPath} if no foxpack runs.`);
       else await sleep(50);
     }
   }
@@ -89,8 +142,15 @@ export function fileStore(path: string = packPath(), options: FileStoreOptions =
     save(data: PackData) {
       return lock(async () => {
         const temp = `${path}.${process.pid}.${randomBytes(4).toString("hex")}.tmp`;
-        await writeFile(temp, JSON.stringify(data), { mode: 0o600 });
+        const file = await open(temp, "w", 0o600);
+        try {
+          await file.writeFile(JSON.stringify(data));
+          await file.sync(); // the data is on disk before the rename makes it the pack (N1)
+        } finally {
+          await file.close();
+        }
         await rename(temp, path);
+        await syncFolder(dirname(path));
       });
     },
   };
