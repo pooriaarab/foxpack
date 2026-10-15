@@ -1,6 +1,6 @@
 {
   "name": "foxpack",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "description": "Bring your AI memory home: import ChatGPT, Claude and Gemini exports into a local store.",
   "type": "module",
   "license": "MIT",
