@@ -2,6 +2,7 @@
 // candidates, and the review flow (accept, reject, edit, forget). The
 // pack lives in a PackStore: a JSON file in Node (foxpack/node),
 // storage.local in the extension, or memory in tests.
+import { exportPack, type ExportOptions } from "./export.js";
 import { extractMemories, normalize } from "./extract.js";
 import { FoxpackError } from "./errors.js";
 import { readExport, type ReadOptions } from "./read.js";
@@ -235,6 +236,58 @@ export function createPack(options: PackOptions) {
         if (m.foxmemoryId && memory) await memory.forget(m.foxmemoryId);
         delete m.foxmemoryId;
         Object.assign(m, { status: "forgotten", text: "", originalText: "", conversationId: null });
+      });
+    },
+
+    /** Writes the pack as foxpack, dti or markdown. Accepted memories only (E1). */
+    export(opts: ExportOptions): Promise<string> {
+      return run(async (d) => exportPack(d, { now: options.now?.(), ...opts }));
+    },
+
+    /**
+     * Reads a foxpack export back in (E3). Its conversations replace the
+     * ones with the same id. Its memories come in as accepted, except where
+     * this pack has already rejected or forgotten them.
+     */
+    restore(contents: string | Uint8Array): Promise<{ conversations: number; memories: number }> {
+      return run(async (d) => {
+        let file: PackData;
+        try {
+          file = parsePack(JSON.parse(typeof contents === "string" ? contents : new TextDecoder().decode(contents)));
+        } catch (error) {
+          throw new FoxpackError("bad_export", `This is not a foxpack export (${error instanceof Error ? error.message : String(error)}).`);
+        }
+        const next: PackData = { ...d, conversations: [...d.conversations], memories: [...d.memories] };
+        const at = new Map(next.conversations.map((c, i) => [c.id, i]));
+        for (const c of file.conversations) {
+          const i = at.get(c.id);
+          if (i === undefined) next.conversations.push(c);
+          else next.conversations[i] = c;
+        }
+        const added: MemoryRecord[] = [];
+        for (const m of file.memories.filter((x) => x.status === "accepted")) {
+          const i = next.memories.findIndex((x) => x.id === m.id);
+          if (i >= 0 && next.memories[i]?.status !== "pending") continue;
+          const record: MemoryRecord = { ...m, decidedAt: m.decidedAt ?? now() };
+          delete record.foxmemoryId;
+          added.push(record);
+          if (i >= 0) next.memories[i] = record;
+          else next.memories.push(record);
+        }
+        if (memory) {
+          const done: string[] = [];
+          try {
+            for (const r of added) {
+              r.foxmemoryId = (await memory.remember(r.text, { kind: foxmemoryKind(r.kind), source: r.conversationId ?? `foxpack:${r.source}` })).memory.id;
+              done.push(r.foxmemoryId);
+            }
+          } catch (error) {
+            for (const id of done) await memory.forget(id);
+            throw error;
+          }
+        }
+        await commit(next);
+        return { conversations: file.conversations.length, memories: added.length };
       });
     },
 
