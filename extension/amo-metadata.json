@@ -2,17 +2,17 @@
   "default_locale": "en-US",
   "slug": "foxpack",
   "name": {
-    "en-US": "foxpack"
+    "en-US": "foxpack: bring your AI memory home"
   },
   "summary": {
-    "en-US": "Bring your AI memory home: import ChatGPT, Claude and Gemini exports into a local store."
+    "en-US": "Import your ChatGPT, Claude and Gemini exports into Firefox, read on this computer. Pick the memories you want to keep, fix or delete them, and export them. Nothing is uploaded."
   },
   "description": {
-    "en-US": "Bring your AI memory home: import ChatGPT, Claude and Gemini exports into a local store.\n\n**Who it is for:** people who want to see foxpack work in their own browser before they build on the foxpack library.\n\n**What leaves your computer:** nothing. foxpack has no server, sends no data off this device, and has no analytics.\n\n**Permissions**\n\n- Storage: keep a value in your browser that the toolbar popup shows.\n\nThe source code is MIT licensed."
+    "en-US": "foxpack brings your AI memory home. Your chats and saved memories sit in the clouds of ChatGPT, Claude and Gemini, in three formats. foxpack reads the export files that each service gives you, in Firefox, on this computer.\n\n**Who it is for:** people who use more than one AI assistant and want one place to see, fix and move what those assistants know about them.\n\n**What it does**\n\n- Open the add-on's options page and drop a ChatGPT data export (zip), a Claude data export (zip), a Google Takeout zip with My Activity > Gemini Apps in JSON, or a text file with your saved memories, one per line.\n- foxpack finds sentences where you said something lasting about yourself, such as \"I prefer aisle seats\" or \"call me Sam\", and lists them as memories to review. It uses fixed sentence patterns, not an AI model.\n- Accept, edit or reject each one. A rejected memory does not come back when you import again. Forget deletes the text.\n- Export your conversations and the memories you accepted as foxpack JSON, as the Data Transfer Initiative AI Conversation History format, or as Markdown.\n- The foxscope add-on (and only foxscope) can ask for your accepted memories by kind. The toolbar popup shows each read. Your conversations are never shared.\n\n**What leaves your computer:** nothing. foxpack has no server, makes no network requests, and has no analytics. The add-on has no host permissions.\n\n**Permissions**\n\n- Storage: your imported conversations and your memories stay in Firefox storage on this computer.\n\nThe source code is MIT licensed."
   },
   "categories": {
     "firefox": [
-      "other"
+      "privacy-security"
     ]
   },
   "homepage": {
@@ -23,6 +23,6 @@
   },
   "version": {
     "license": "MIT",
-    "approval_notes": "The uploaded source.zip is the git tree of this release. To build: install Node 24 and pnpm (corepack enable), run `pnpm install --frozen-lockfile`, then `pnpm build:ext`. The output is dist-ext/. esbuild bundles extension/*.js; the other files are copied unmodified. To try it: click the toolbar button. The popup shows the value that the background script stores at install. No account is needed."
+    "approval_notes": "The uploaded source.zip is the git tree of this release. To build: install Node 24 and pnpm 11 (corepack enable), run `pnpm install --frozen-lockfile`, then `pnpm build:ext`. The output is dist-ext/. esbuild bundles extension/*.js with src/ and the fflate dependency; the other files are copied unmodified. To try it: open the add-on's options page, choose \"Saved memories list\", and drop a text file with a few lines such as \"I prefer aisle seats.\" Then press Accept on a memory and Export. No account is needed. runtime.onMessageExternal answers only the extension foxscope@pooriaarab."
   }
 }
