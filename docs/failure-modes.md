@@ -100,6 +100,7 @@ trusts it, and never calls a network API to read it.
 | C1 | A command or a source name is wrong. | The CLI prints the usage to stderr and exits 2. | `tests/cli.test.ts` |
 | C2 | An import fails (bad file, corrupt zip). | The CLI prints one line with the code and the reason to stderr, and exits 1. The store does not change. | `tests/cli.test.ts` |
 | C3 | `export` writes binary or log text to stdout and breaks a pipe to a file. | Only the export goes to stdout. Messages go to stderr. | `tests/cli.test.ts` |
+| C4 | A memory in `pack.json` has a `confidence` that is not a number (a string, `null`, `NaN` written by hand, or a number outside 0 to 1). | The store check rejects it: every command exits 1 with `corrupt_store`. The CLI never crashes in the middle of a listing. | `tests/cli.test.ts` |
 
 ## MCP server (`foxpack mcp`)
 
