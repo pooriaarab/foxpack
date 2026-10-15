@@ -131,7 +131,8 @@ jobs:
             echo "::error::Secret NPM_TOKEN is empty. Add an npm automation token as the repository secret NPM_TOKEN, then push to release again."
             exit 1
           fi
-          TARBALL="./release/${PKG}-${VER}.tgz"
+          # npm pack names a scoped tarball <scope>-<name>-<version>.tgz, without the @.
+          TARBALL="./release/$(echo "${PKG#@}" | tr / -)-${VER}.tgz"
           if npm view "$PKG@$VER" version >/dev/null 2>&1; then
             echo "$PKG@$VER is already on npm. Skipping publish so the AMO job can run."
           else
