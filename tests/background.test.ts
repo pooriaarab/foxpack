@@ -52,6 +52,14 @@ describe("the extension's onMessageExternal listener", () => {
     expect(await listen({ type: "scent.read", fields: Array.from({ length: 51 }, () => "memory.facts") }, foxscope)).toHaveProperty("error");
   });
 
+  it("K12: two pages on one storage area never lose a write", async () => {
+    const storage = area();
+    const slow: StorageArea = { get: async (key) => (await new Promise((done) => setTimeout(done, 5)), storage.get(key)), set: storage.set };
+    const [a, b] = [createPack({ store: storageStore(slow) }), createPack({ store: storageStore(slow) })];
+    await Promise.all(["- Prefers tea.", "- Prefers jazz.", "- Likes long walks.", "- Is a morning person."].map((list, i) => (i % 2 ? b : a).import("memories", list)));
+    expect((await a.memories()).length).toBe(4);
+  });
+
   it("K6: a corrupt stored pack gives an error answer, not a throw", async () => {
     const listen = scentListener(area({ [PACK_KEY]: { format: "foxpack/v9" } }));
     expect(await listen({ type: "scent.read", fields: ["memory.facts"] }, foxscope)).toEqual({ error: expect.stringMatching(/foxpack\/v9/) });
