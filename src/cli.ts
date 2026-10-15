@@ -2,11 +2,12 @@
 // (default ~/.foxpack/pack.json). Only results go to stdout; messages and
 // errors go to stderr (C3). Exit 0 when it works, 1 when it fails, 2 for
 // bad arguments (C1).
+import { readFile } from "node:fs/promises";
 import { parseArgs } from "node:util";
 import { FoxpackError } from "./errors.js";
 import { EXPORT_FORMATS, type ExportFormat } from "./export.js";
 import { createPack, type Pack } from "./pack.js";
-import { fileStore, packPath, readExportFile, type FileStore } from "./node.js";
+import { fileStore, packPath, readExportFile, readOnlySource, type FileStore } from "./node.js";
 import { SOURCES, type MemoryRecord, type MemoryStatus, type Source } from "./types.js";
 
 export interface Io {
@@ -33,6 +34,7 @@ Commands:
   search <words>                   Search the imported conversations (a text match).
   export --format foxpack|dti|markdown [--no-conversations]
                                    Print an export with the accepted memories.
+  mcp                              Start the read-only MCP server on stdio.
 
 The pack is ${"$"}FOXPACK_HOME/pack.json, else ~/.foxpack/pack.json.
 `;
@@ -100,6 +102,22 @@ async function command(name: string, rest: string[], io: Io): Promise<void> {
       const { values } = parseArgs({ args: rest, options: { format: { type: "string" }, "no-conversations": { type: "boolean" } } });
       if (!EXPORT_FORMATS.includes(values.format as ExportFormat)) throw new UsageError("export needs --format foxpack, dti or markdown.");
       io.out(await pack.export({ format: values.format as ExportFormat, conversations: !values["no-conversations"] }));
+      return;
+    }
+    case "mcp": {
+      if (rest.length > 0) throw new UsageError("mcp takes no arguments.");
+      const [{ createMcpServer }, { StdioServerTransport }] = await Promise.all([import("./mcp.js"), import("@modelcontextprotocol/sdk/server/stdio.js")]);
+      const { version } = JSON.parse(await readFile(new URL("../package.json", import.meta.url), "utf8")) as { version: string };
+      const server = createMcpServer({ data: readOnlySource(store).data, version });
+      // The server stops when the client closes the session or stdin ends.
+      const closed = new Promise<void>((done) => {
+        // oxlint-disable-next-line unicorn/prefer-add-event-listener -- the SDK has no addEventListener
+        server.server.onclose = done;
+        process.stdin.once("end", done);
+      });
+      await server.connect(new StdioServerTransport());
+      io.err(`foxpack MCP server: read-only, on ${store.path}\n`);
+      await closed;
       return;
     }
     default:
