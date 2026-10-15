@@ -1,0 +1,28 @@
+{
+  "default_locale": "en-US",
+  "slug": "foxpack",
+  "name": {
+    "en-US": "foxpack"
+  },
+  "summary": {
+    "en-US": "Bring your AI memory home: import ChatGPT, Claude and Gemini exports into a local store."
+  },
+  "description": {
+    "en-US": "Bring your AI memory home: import ChatGPT, Claude and Gemini exports into a local store.\n\n**Who it is for:** people who want to see foxpack work in their own browser before they build on the foxpack library.\n\n**What leaves your computer:** nothing. foxpack has no server, sends no data off this device, and has no analytics.\n\n**Permissions**\n\n- Storage: keep a value in your browser that the toolbar popup shows.\n\nThe source code is MIT licensed."
+  },
+  "categories": {
+    "firefox": [
+      "other"
+    ]
+  },
+  "homepage": {
+    "en-US": "https://github.com/pooriaarab/foxpack"
+  },
+  "support_url": {
+    "en-US": "https://github.com/pooriaarab/foxpack/issues"
+  },
+  "version": {
+    "license": "MIT",
+    "approval_notes": "The uploaded source.zip is the git tree of this release. To build: install Node 24 and pnpm (corepack enable), run `pnpm install --frozen-lockfile`, then `pnpm build:ext`. The output is dist-ext/. esbuild bundles extension/*.js; the other files are copied unmodified. To try it: click the toolbar button. The popup shows the value that the background script stores at install. No account is needed."
+  }
+}
