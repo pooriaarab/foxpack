@@ -104,7 +104,7 @@ No real user export was used in the tests. The fixtures follow the shapes in
 
 - **Three vendor exports and plain lists:** zip or JSON, found at any depth in the zip; see [coverage](#coverage).
 - **Candidates without a model:** fixed sentence patterns, a kind and a confidence, the source chat and date.
-- **Review that sticks:** accept, edit, reject and forget survive re-imports. Forget deletes the memory, and the sentence it came from in your imported chats.
+- **Review that sticks:** accept, edit, reject and forget survive re-imports. Forget deletes the memory, and the sentence it came from in your imported chats and their titles. A reply or a chat title in other words stays.
 - **Exports:** foxpack JSON (reads back in), DTI JSON, Markdown; accepted memories only.
 - **Agents see accepted memories only:** SCENT and MCP never return a conversation or a pending candidate.
 
@@ -195,7 +195,7 @@ The add-on has the `storage` permission only, and no host permissions.
 - **Gemini has no conversation ids.** Entries are grouped by a chat link when the export has one, else each prompt is its own conversation.
 - **One JSON object.** The whole pack is read and written at once, under one storage key in Firefox or in one file in Node. Every review click (accept, reject, edit, forget) reads and rewrites all of it, conversations included, so with a large history each click gets slower. The 256 MiB cap stops larger files.
 - **Not encrypted.** The pack is plain JSON in your home folder or in Firefox storage.
-- **Forget removes your sentences, nothing else.** It removes each sentence you wrote that gave the memory, also in a re-import. It never searches for the memory text, so an edit cannot widen it. An assistant reply that repeats the fact stays in the chat.
+- **Forget removes your sentences, nothing else.** It removes each sentence you wrote that gave the memory, also in a re-import, and its copy in the title of that chat. It never searches for the memory text, so an edit cannot widen it. An assistant reply that repeats the fact stays, and so does a title that names it in other words ("Jane's epilepsy"), as ChatGPT and Claude write titles.
 - **ChatGPT memory writes are a history.** A memory you deleted in ChatGPT can still show up as a candidate.
 - **The extension does not use foxmemory.** A separate add-on cannot read foxpack's storage anyway; use the library with your own foxmemory to share memories.
 

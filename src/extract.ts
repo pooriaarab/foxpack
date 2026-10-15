@@ -145,9 +145,10 @@ export const FORGOTTEN = "[forgotten]";
  * Removes forgotten memories from conversations (K11, K14). The source of
  * a memory is each user sentence whose candidate id is in `ids`: the id is
  * a hash of that sentence. Each such sentence, and nothing else, becomes
- * "[forgotten]". Nothing searches for a memory's text, so an edit to a
- * short text ("I") cannot reach other words. Conversations with nothing
- * to remove are returned as they are.
+ * "[forgotten]", and so does its copy in the title (K15). Nothing
+ * searches for a memory's text, so an edit to a short text ("I") cannot
+ * reach other words. Conversations with nothing to remove are returned
+ * as they are.
  */
 export function redact(conversations: readonly Conversation[], ids: ReadonlySet<string>): Conversation[] {
   if (ids.size === 0) return [...conversations];
@@ -156,17 +157,40 @@ export function redact(conversations: readonly Conversation[], ids: ReadonlySet<
     return hit !== null && ids.has(candidateId(hit.kind, hit.text));
   };
   return conversations.map((c) => {
-    let changed = false;
+    const edits: Edit[] = [];
     const messages = c.messages.map((m): Message => {
       const gone = m.role === "user" ? spans(m.text).filter(source) : [];
       if (gone.length === 0) return m;
-      changed = true;
       let text = m.text;
       for (const { start, end } of gone.toReversed()) text = `${text.slice(0, start)}${FORGOTTEN}${text.slice(end)}`;
+      edits.push({ from: m.text, to: text, gone: gone.map(({ start, end }) => m.text.slice(start, end)) });
       return { ...m, text };
     });
-    return changed ? { ...c, messages } : c;
+    return edits.length > 0 ? { ...c, title: retitle(c.title, edits), messages } : c;
   });
+}
+
+/** One message that redact changed: its text before and after, and the sentences it removed. */
+interface Edit {
+  from: string;
+  to: string;
+  gone: string[];
+}
+
+/**
+ * The title of a conversation that redact changed (K15). A title that is a
+ * copy of a message, whole or cut with "…" (Gemini names a chat after its
+ * first prompt), becomes the same copy of the redacted message. Else each
+ * removed sentence in it, word for word, becomes "[forgotten]". A title
+ * that says it in other words ("Jane's epilepsy") stays.
+ */
+function retitle(title: string, edits: readonly Edit[]): string {
+  const cut = title.endsWith("…") ? title.length - 1 : 0;
+  for (const { from, to } of edits) {
+    if (title === from) return to;
+    if (cut > 0 && from.length > cut && from.startsWith(title.slice(0, cut))) return to.length > cut + 1 ? `${to.slice(0, cut)}…` : to;
+  }
+  return edits.flatMap((e) => e.gone).reduce((t, sentence) => t.replaceAll(sentence, FORGOTTEN), title);
 }
 
 /** Memory candidates from the user turns and the saved memories of a pack. Pure and deterministic. */
