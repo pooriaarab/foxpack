@@ -2,7 +2,7 @@
 // No model: a short list of sentence patterns ("I prefer...", "call me...",
 // "my sister is...") with a confidence for each. A person reviews every
 // candidate before it is stored as a memory.
-import type { Candidate, Conversation, MemoryKind, SavedMemory, Source } from "./types.js";
+import type { Candidate, Conversation, MemoryKind, Message, SavedMemory, Source } from "./types.js";
 
 export interface ExtractInput {
   /** The source of saved memories that have no conversation. Default: "memories". */
@@ -98,6 +98,46 @@ function asCandidate(sentence: string): { text: string; kind: MemoryKind; base: 
     return { text: /[.!]$/.test(text) ? text : `${text}.`, kind, base };
   }
   return null;
+}
+
+/** What a forgotten sentence becomes in a conversation (K11). */
+export const FORGOTTEN = "[forgotten]";
+
+const escapeRegExp = (text: string) => text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
+/**
+ * Removes forgotten memories from conversations (K11): each user sentence
+ * whose candidate id is in `ids`, and each copy of its candidate text or of
+ * one of `texts` in any message, any case, becomes "[forgotten]". So an
+ * assistant reply that repeats the sentence goes too, also in a re-import
+ * where only the id is left. Conversations with nothing to remove are
+ * returned as they are.
+ */
+export function redact(conversations: readonly Conversation[], ids: ReadonlySet<string>, texts: readonly string[] = []): Conversation[] {
+  const hits = (m: Message) => (m.role === "user" && ids.size > 0 ? sentences(m.text).flatMap((sentence) => {
+    const hit = asCandidate(sentence);
+    return hit && ids.has(candidateId(hit.kind, hit.text)) ? [{ sentence, text: hit.text }] : [];
+  }) : []);
+  const found = new Set(texts.map((t) => t.trim()).filter(Boolean));
+  for (const c of conversations) for (const m of c.messages) for (const h of hits(m)) found.add(h.text);
+  if (found.size === 0) return [...conversations];
+  const copies = [...found].map((t) => new RegExp(escapeRegExp(t), "gi"));
+  return conversations.map((c) => {
+    let changed = false;
+    const messages = c.messages.map((m) => {
+      let text = m.text;
+      for (const { sentence } of hits(m)) {
+        // sentences() turns curly quotes into straight ones, one character for one.
+        const at = text.replace(/[’‘]/g, "'").indexOf(sentence);
+        if (at >= 0) text = `${text.slice(0, at)}${FORGOTTEN}${text.slice(at + sentence.length)}`;
+      }
+      for (const copy of copies) text = text.replace(copy, FORGOTTEN);
+      if (text === m.text) return m;
+      changed = true;
+      return { ...m, text };
+    });
+    return changed ? { ...c, messages } : c;
+  });
 }
 
 /** Memory candidates from the user turns and the saved memories of a pack. Pure and deterministic. */
