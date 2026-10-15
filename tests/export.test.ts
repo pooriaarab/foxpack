@@ -88,6 +88,20 @@ describe("export", () => {
     expect((await pack.stats()).memories.pending).toBe(1);
   });
 
+  it("E9: restore holds a memory text to the 1 to 500 characters of edit", async () => {
+    const file = JSON.parse(await (await reviewed()).export({ format: "foxpack" }));
+    const [m] = file.memories;
+    const store = inMemoryStore();
+    const pack = createPack({ store, now });
+    for (const text of ["", "   ", "x".repeat(501), "x".repeat(100_000)]) {
+      const error = await pack.restore(JSON.stringify({ ...file, memories: [{ ...m, text }] })).then(() => null, (e: unknown) => e);
+      expect(error, `${text.length} characters`).toMatchObject({ code: "bad_export", message: expect.stringMatching(/1 to 500 characters/) });
+    }
+    expect(store.saved).toBeNull();
+    await pack.restore(JSON.stringify({ ...file, memories: [{ ...m, text: `  ${"x".repeat(500)}  ` }] }));
+    expect((await pack.memories()).map((r) => [r.text.length, r.originalText.length])).toEqual([[500, 500]]);
+  });
+
   it("E3: restore keeps a local rejection", async () => {
     const pack = await reviewed();
     const text = await pack.export({ format: "foxpack" });

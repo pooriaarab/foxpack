@@ -13,7 +13,6 @@ export {
   emptyPack,
   filterMemories,
   inMemoryStore,
-  MAX_MEMORY_TEXT,
   packStats,
   parsePack,
   searchConversations,
