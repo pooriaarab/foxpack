@@ -49,7 +49,8 @@ async function importCommand(pack: Pack, store: FileStore, rest: string[], io: I
   const bytes = await readExportFile(file);
   if (source === "foxpack") {
     const r = await store.lock(() => pack.restore(bytes));
-    io.err(`Restored ${r.conversations} conversations and ${r.memories} accepted memories.\n`);
+    io.err(`Restored ${r.conversations} conversations and ${r.memories} memories to review.\n`);
+    io.err("Review them with: foxpack memories --pending\n");
     return;
   }
   if (!SOURCES.includes(source as Source)) throw new UsageError(`The source must be chatgpt, claude, gemini, memories or foxpack, not ${source}.`);

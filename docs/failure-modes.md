@@ -66,7 +66,7 @@ trusts it, and never calls a network API to read it.
 | K3 | `edit` sets an empty text or one longer than 500 characters. | It throws `bad_input`. | `tests/pack.test.ts` |
 | K4 | `forget` leaves the memory in foxmemory. | `forget` calls `memory.forget` on the foxmemory id, and keeps a tombstone so a new import does not offer it again. | `tests/pack.test.ts` |
 | K5 | foxmemory fails during `accept`. | The candidate stays pending, and the error goes to the caller. The pack and foxmemory do not disagree. | `tests/pack.test.ts` |
-| K6 | The stored pack is corrupt, or comes from a newer foxpack. | `createPack` throws `corrupt_store` with the reason. It never replaces the file with an empty pack. | `tests/pack.test.ts` |
+| K6 | The stored pack is corrupt, or comes from a newer foxpack. Corrupt means any record of the wrong shape: a conversation with no messages list, an unknown kind, source, role or status, a confidence or count that is not a number, a time that is not a date, or two records with one id. | `createPack` throws `corrupt_store`, and the message names the record. It never replaces the file with an empty pack. A field foxpack does not know is dropped when the pack is read. | `tests/pack.test.ts` |
 | K7 | A failed import leaves half of a file in the store. | Parse and extract finish before the store is written. One import is one write. | `tests/pack.test.ts` |
 | K8 | Two calls at the same time lose a write. | The calls of one pack run one after the other. | `tests/pack.test.ts` |
 | K9 | `search` with an empty query returns the whole pack. | It throws `bad_input`. Results are capped at `limit` (default 20). | `tests/pack.test.ts` |
@@ -78,10 +78,12 @@ trusts it, and never calls a network API to read it.
 |---|---|---|---|
 | E1 | A rejected, forgotten or pending candidate is in an export. | Exports hold accepted memories only. | `tests/export.test.ts`, E2E |
 | E2 | Markdown output breaks when a text holds `#`, `*`, `|` or a new line. | Memory and message text is escaped and kept on its own line. | `tests/export.test.ts` |
-| E3 | An export cannot be read back in. | A `foxpack` export imports into an empty pack with the same conversations and accepted memories. | `tests/export.test.ts` |
+| E3 | An export cannot be read back in. | A `foxpack` export imports into an empty pack with the same conversations, and its memories to review again (E8). | `tests/export.test.ts` |
 | E4 | An unknown format is asked for. | It throws `bad_input` and lists the formats. | `tests/export.test.ts` |
 | E5 | A restore file is nested very deep (an array 5000 levels down, in any field). | `restore` throws `bad_export` before it parses: a foxpack file is never more than 16 levels deep. No `RangeError` escapes, and nothing is saved. | `tests/export.test.ts` |
 | E6 | An export carries text the user removed: the `originalText` of an edited memory, or another field that only the local store needs (`foxmemoryId`). | An exported memory has only `id`, `text`, `kind`, `confidence`, `source`, `conversationId`, `date`, `seenIn`, `status` and `decidedAt`. A conversation has only its documented fields. `restore` sets `originalText` to the text it reads. | `tests/export.test.ts` |
+| E7 | A restore file has a record of the wrong shape (a conversation with only an id, `kind: "weird"`, a string count), so it breaks `stats`, the CLI and the pages after it is saved. | `restore` checks every record as K6 does and throws `bad_export` that names the record. One bad record saves nothing. | `tests/export.test.ts` |
+| E8 | A restore file marks memories as accepted, so they skip review and reach foxscope and foxmemory. | Every memory a restore brings in is pending. An export has no signature, so foxpack cannot tell the user's own file from a stranger's, and it does not take the file's word. A local decision (accepted, rejected, forgotten) wins over the file. Nothing goes to foxmemory until the user accepts. | `tests/export.test.ts` |
 
 ## SCENT resolver (`memoryResolver`)
 
