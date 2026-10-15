@@ -5,6 +5,8 @@
 # Firefox E2E on that build on Ichabod. Only then npm publishes the packed
 # tarball, without an install, and amo submits dist-ext/. Each job asks
 # for its own permissions (docs/failure-modes.md R1-R4).
+# Promote with a merge commit, never a squash: a squash leaves release with
+# a commit main lacks, and the next promotion then conflicts.
 name: Release
 
 on:
@@ -129,7 +131,7 @@ jobs:
             echo "::error::Secret NPM_TOKEN is empty. Add an npm automation token as the repository secret NPM_TOKEN, then push to release again."
             exit 1
           fi
-          TARBALL="release/${PKG}-${VER}.tgz"
+          TARBALL="./release/${PKG}-${VER}.tgz"
           if npm view "$PKG@$VER" version >/dev/null 2>&1; then
             echo "$PKG@$VER is already on npm. Skipping publish so the AMO job can run."
           else
