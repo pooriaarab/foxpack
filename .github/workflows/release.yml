@@ -5,6 +5,8 @@
 # Firefox E2E on that build on Ichabod. Only then npm publishes the packed
 # tarball, without an install, and amo submits dist-ext/. Each job asks
 # for its own permissions (docs/failure-modes.md R1-R4).
+# Promote with a merge commit, never a squash: a squash leaves release with
+# a commit main lacks, and the next promotion then conflicts.
 name: Release
 
 on:
