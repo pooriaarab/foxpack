@@ -93,6 +93,25 @@ export function parsePack(raw: unknown): PackData {
   return value as PackData;
 }
 
+/** A foxpack file is at most this deep: pack, conversations, one, messages, one, and room to spare (E5). */
+const MAX_DEPTH = 16;
+
+/** Throws bad_export when JSON text nests past MAX_DEPTH, so a deep file never reaches JSON.parse or a save. */
+function checkDepth(text: string) {
+  let depth = 0;
+  let inString = false;
+  for (let i = 0; i < text.length; i++) {
+    const ch = text[i];
+    if (inString) {
+      if (ch === "\\") i++;
+      else if (ch === '"') inString = false;
+    } else if (ch === '"') inString = true;
+    else if (ch === "[" || ch === "{") {
+      if (++depth > MAX_DEPTH) throw new FoxpackError("bad_export", `This file nests deeper than ${MAX_DEPTH} levels, so it is not a foxpack export.`);
+    } else if (ch === "]" || ch === "}") depth--;
+  }
+}
+
 const statuses = (s: MemoryFilter["status"]) => (s === undefined ? ["pending", "accepted", "rejected"] : Array.isArray(s) ? s : [s]);
 
 /** Memories that match a filter. The default leaves out forgotten ones. */
@@ -254,9 +273,11 @@ export function createPack(options: PackOptions) {
      */
     restore(contents: string | Uint8Array): Promise<{ conversations: number; memories: number }> {
       return run(async (d) => {
+        const text = typeof contents === "string" ? contents : new TextDecoder().decode(contents);
+        checkDepth(text);
         let file: PackData;
         try {
-          file = parsePack(JSON.parse(typeof contents === "string" ? contents : new TextDecoder().decode(contents)));
+          file = parsePack(JSON.parse(text));
         } catch (error) {
           throw new FoxpackError("bad_export", `This is not a foxpack export (${error instanceof Error ? error.message : String(error)}).`);
         }

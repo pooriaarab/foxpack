@@ -80,6 +80,7 @@ trusts it, and never calls a network API to read it.
 | E2 | Markdown output breaks when a text holds `#`, `*`, `|` or a new line. | Memory and message text is escaped and kept on its own line. | `tests/export.test.ts` |
 | E3 | An export cannot be read back in. | A `foxpack` export imports into an empty pack with the same conversations and accepted memories. | `tests/export.test.ts` |
 | E4 | An unknown format is asked for. | It throws `bad_input` and lists the formats. | `tests/export.test.ts` |
+| E5 | A restore file is nested very deep (an array 5000 levels down, in any field). | `restore` throws `bad_export` before it parses: a foxpack file is never more than 16 levels deep. No `RangeError` escapes, and nothing is saved. | `tests/export.test.ts` |
 
 ## SCENT resolver (`memoryResolver`)
 

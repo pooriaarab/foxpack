@@ -69,6 +69,21 @@ describe("export", () => {
     expect((await pack.memories({ status: "rejected" })).map((m) => m.id)).toContain(ava?.id);
   });
 
+  it("E5: a deeply nested restore file is bad_export, and saves nothing", async () => {
+    const store = inMemoryStore();
+    const pack = createPack({ store, now });
+    const file = JSON.parse(await (await reviewed()).export({ format: "foxpack" }));
+    for (const depth of [17, 5000]) {
+      const deep = `${"[".repeat(depth)}${"]".repeat(depth)}`;
+      const text = JSON.stringify({ ...file, memories: [{ ...file.memories[0], note: "{[]} \\\" [" }] }).replace('"note":', `"deep":${deep},"note":`);
+      const error = await pack.restore(text).then(() => null, (e: unknown) => e);
+      expect(error).toBeInstanceOf(FoxpackError);
+      expect(error).toMatchObject({ code: "bad_export", message: expect.stringMatching(/16 levels/) });
+    }
+    expect(store.saved).toBeNull();
+    expect(await pack.restore(JSON.stringify({ ...file, memories: [{ ...file.memories[0], note: "[[[[[[[[[[[[[[[[[[[[" }] }))).toMatchObject({ memories: 1 });
+  });
+
   it("E4: an unknown format is bad_input and names the formats", () => {
     expect(() => exportPack({ format: "foxpack/v1", conversations: [], memories: [], imports: [] }, { format: "csv" as never })).toThrow(/foxpack, dti, markdown/);
   });
