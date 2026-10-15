@@ -105,7 +105,7 @@ describe("foxpack CLI", () => {
     const exported = (await a.cli("export", "--format", "foxpack")).out;
     const b = setup();
     const r = await b.cli("import", "foxpack", b.file("e.json", exported));
-    expect(r.err).toContain("Restored 0 conversations and 1 accepted memories.");
-    expect((await b.cli("memories")).out).toMatch(/Likes tea and toast\.\n$/);
+    expect(r.err).toContain("Restored 0 conversations and 1 memories to review.");
+    expect((await b.cli("memories", "--pending")).out).toMatch(/\[pending\] Likes tea and toast\.\n$/);
   });
 });

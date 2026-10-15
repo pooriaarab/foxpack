@@ -49,15 +49,43 @@ describe("export", () => {
     expect(md).toContain("### Garden planning\n\nClaude, 2026-02-01\n\n**You:**\n\n> My daughter is called Ava and she loves tomatoes.");
   });
 
-  it("E3: a foxpack export reads back into an empty pack, and into foxmemory", async () => {
+  it("E3 + E8: a foxpack export reads back into an empty pack, with its memories to review", async () => {
     const text = await (await reviewed()).export({ format: "foxpack" });
     const memory = createMemory({ store: memoryStore(), embedder: { embed: async (t: string[]) => ({ model: "fixed", vectors: t.map(() => [1]) }) } });
     const fresh = createPack({ store: inMemoryStore(), memory, now });
     expect(await fresh.restore(text)).toEqual({ conversations: 3, memories: 3 });
-    expect((await fresh.memories()).map((m) => m.status)).toEqual(["accepted", "accepted", "accepted"]);
+    expect((await fresh.memories()).map((m) => [m.status, m.decidedAt])).toEqual([["pending", null], ["pending", null], ["pending", null]]);
     expect((await fresh.conversations()).length).toBe(3);
-    expect((await memory.list()).length).toBe(3);
+    expect(await memory.list()).toEqual([]);
     await expect(fresh.restore("{}")).rejects.toThrow(FoxpackError);
+  });
+
+  it("E7: a restore file with one bad record is bad_export and saves nothing", async () => {
+    const file = JSON.parse(await (await reviewed()).export({ format: "foxpack" }));
+    const [c] = file.conversations;
+    const [m] = file.memories;
+    const bad = [
+      { conversations: [{ id: "z" }] },
+      { conversations: [{ ...c, source: "bard" }] },
+      { conversations: [{ ...c, createdAt: "yesterday" }] },
+      { conversations: [{ ...c, messages: [{ ...c.messages[0], role: "system" }] }] },
+      { conversations: [c, c] },
+      { memories: [{ ...m, kind: "weird" }] },
+      { memories: [{ ...m, seenIn: "2" }] },
+      { memories: [{ ...m, conversationId: 7 }] },
+      { memories: [{ ...m, source: "bard" }] },
+      { memories: [m, m] },
+    ];
+    const store = inMemoryStore();
+    const pack = createPack({ store, now });
+    await pack.import("memories", "- Likes long walks.");
+    const before = JSON.stringify(store.saved);
+    for (const patch of bad) {
+      const error = await pack.restore(JSON.stringify({ ...file, ...patch })).then(() => null, (e: unknown) => e);
+      expect(error, JSON.stringify(patch).slice(0, 80)).toMatchObject({ code: "bad_export", message: expect.stringMatching(/conversation|memor/) });
+    }
+    expect(JSON.stringify(store.saved)).toBe(before);
+    expect((await pack.stats()).memories.pending).toBe(1);
   });
 
   it("E3: restore keeps a local rejection", async () => {

@@ -133,7 +133,7 @@ A pack has these methods. They run one at a time.
 | `memories({ status?, kind?, query? })` | Candidates and memories. The default leaves out forgotten ones. |
 | `accept(id)`, `reject(id)`, `edit(id, text)`, `forget(id)` | The review. With a foxmemory sink, accept, edit and forget change foxmemory too. |
 | `export({ format, conversations? })` | `foxpack`, `dti` or `markdown`, with accepted memories only. |
-| `restore(text)` | Reads a foxpack export back in. A local rejection wins. |
+| `restore(text)` | Reads a foxpack export back in. Its memories come back as pending, to review again: a file can say anything, so foxpack does not take its word that they were accepted. A local decision wins. One bad record and nothing is saved. |
 | `stats()`, `clear()`, `data()` | Counts; delete everything; a copy of the stored pack. |
 
 ### `foxpack/node`
