@@ -14,7 +14,7 @@ const HEADING = /^(?:#|\*\*[^*]+\*\*:?$)|:$/;
 
 /** The memories in a list or a memory file, with the count of lines skipped. */
 function readLines(contents: string): { memories: string[]; skipped: number } {
-  const memories: string[] = [];
+  const memories = new Set<string>(); // a Set keeps the dedupe linear (P19)
   let skipped = 0;
   for (const raw of contents.replace(/^\uFEFF/, "").split(/\r\n?|\n/)) {
     const line = raw.trim().replace(BULLET, "").trim();
@@ -26,10 +26,10 @@ function readLines(contents: string): { memories: string[]; skipped: number } {
     // A paragraph (a memory file in prose) is split into sentences.
     for (const piece of line.length > 200 ? line.split(/(?<=[.!?])\s+/) : [line]) {
       if (piece.length > MAX_MEMORY_CHARS) skipped++;
-      else if (!memories.includes(piece)) memories.push(piece);
+      else memories.add(piece);
     }
   }
-  return { memories, skipped };
+  return { memories: [...memories], skipped };
 }
 
 const asSaved = (memories: string[]): SavedMemory[] => memories.map((text) => ({ text, conversationId: null, date: null }));

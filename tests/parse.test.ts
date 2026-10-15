@@ -1,6 +1,6 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-import { FoxpackError, htmlToText, parseChatGPT, parseClaude, parseClaudeMemories, parseGemini, parseSavedMemories } from "../src/index.js";
+import { createPack, FoxpackError, htmlToText, inMemoryStore, parseChatGPT, parseClaude, parseClaudeMemories, parseGemini, parseSavedMemories } from "../src/index.js";
 
 const fixture = (name: string) => readFileSync(new URL(`./fixtures/${name}`, import.meta.url), "utf8");
 const code = (fn: () => unknown) => {
@@ -181,6 +181,16 @@ describe("parseSavedMemories", () => {
 
   it("P12: removes a BOM and Windows line ends", () => {
     expect(parseSavedMemories("\uFEFFLikes hiking.\r\nIs tall.\r\n").savedMemories.map((m) => m.text)).toEqual(["Likes hiking.", "Is tall."]);
+  });
+
+  it("P19: 60000 lines parse and import in linear time", async () => {
+    const text = Array.from({ length: 60_000 }, (_, i) => `- I like item number ${i} a lot.`).join("\n");
+    let started = performance.now();
+    expect(parseSavedMemories(`${text}\n- I like item number 7 a lot.`).savedMemories).toHaveLength(60_000);
+    expect(performance.now() - started).toBeLessThan(1000);
+    started = performance.now();
+    expect((await createPack({ store: inMemoryStore() }).import("memories", text)).added).toBe(60_000);
+    expect(performance.now() - started).toBeLessThan(5000);
   });
 
   it("P13: skips a line longer than 500 characters", () => {
