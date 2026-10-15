@@ -88,7 +88,22 @@ describe("createPack", () => {
   });
 
   it("K6: a corrupt or newer stored pack is corrupt_store, and is not replaced", async () => {
-    for (const bad of ["text", [1], { format: "foxpack/v9", conversations: [], memories: [], imports: [] }, { format: "foxpack/v1" }, { format: "foxpack/v1", conversations: [], memories: [{ id: 1 }], imports: [] }]) {
+    const good = (await filled()).store.saved as unknown as { conversations: Record<string, unknown>[]; memories: Record<string, unknown>[]; imports: Record<string, unknown>[] };
+    const [c] = good.conversations;
+    const [m] = good.memories;
+    const [i] = good.imports;
+    const corrupt = [
+      { conversations: [{ id: "z" }] },
+      { conversations: [{ ...c, title: null }] },
+      { conversations: [c, c] },
+      { memories: [{ ...m, kind: "weird" }] },
+      { memories: [{ ...m, status: "maybe" }] },
+      { memories: [{ ...m, originalText: undefined }] },
+      { memories: [{ ...m, decidedAt: "soon" }] },
+      { memories: [{ ...m, foxmemoryId: 1 }] },
+      { imports: [{ ...i, skipped: -1 }] },
+    ].map((patch) => ({ ...good, ...patch }));
+    for (const bad of ["text", [1], { format: "foxpack/v9", conversations: [], memories: [], imports: [] }, { format: "foxpack/v1" }, { format: "foxpack/v1", conversations: [], memories: [{ id: 1 }], imports: [] }, ...corrupt]) {
       const store = inMemoryStore(bad);
       const pack = createPack({ store });
       expect(await errorCode(pack.stats())).toBe("corrupt_store");
@@ -96,6 +111,8 @@ describe("createPack", () => {
       expect(store.saved).toEqual(bad);
     }
     await expect(createPack({ store: inMemoryStore({ format: "foxpack/v9", conversations: [], memories: [], imports: [] }) }).stats()).rejects.toThrow(/foxpack\/v9/);
+    const extra = createPack({ store: inMemoryStore({ ...good, memories: [{ ...m, deep: [[["x"]]] }] }) });
+    expect(Object.keys((await extra.data()).memories[0] ?? {})).not.toContain("deep");
   });
 
   it("K7: a failed import writes nothing", async () => {

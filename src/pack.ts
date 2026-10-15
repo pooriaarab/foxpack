@@ -2,6 +2,7 @@
 // candidates, and the review flow (accept, reject, edit, forget). The
 // pack lives in a PackStore: a JSON file in Node (foxpack/node),
 // storage.local in the extension, or memory in tests.
+import { checkPack, EXPORTED, STORED } from "./check.js";
 import { exportPack, type ExportOptions } from "./export.js";
 import { extractMemories, normalize } from "./extract.js";
 import { FoxpackError } from "./errors.js";
@@ -71,26 +72,10 @@ const MAX_IMPORTS = 100;
 
 export const emptyPack = (): PackData => ({ format: "foxpack/v1", conversations: [], memories: [], imports: [] });
 
-/** Checks a stored pack. Throws `corrupt_store`, and never turns bad data into an empty pack (K6). */
+/** Checks a stored pack, every record of it. Throws `corrupt_store`, and never turns bad data into an empty pack (K6). */
 export function parsePack(raw: unknown): PackData {
   if (raw === null || raw === undefined) return emptyPack();
-  if (typeof raw !== "object" || Array.isArray(raw)) throw new FoxpackError("corrupt_store", "The stored pack is not an object.");
-  const value = raw as Partial<PackData>;
-  if (value.format !== "foxpack/v1") {
-    throw new FoxpackError("corrupt_store", typeof value.format === "string" ? `The stored pack has format ${value.format}, which this foxpack cannot read. Update foxpack.` : "The stored pack has no format field.");
-  }
-  if (!Array.isArray(value.conversations) || !Array.isArray(value.memories) || !Array.isArray(value.imports)) {
-    throw new FoxpackError("corrupt_store", "The stored pack is missing its conversations, memories or imports.");
-  }
-  for (const m of value.memories) {
-    if (typeof m?.id !== "string" || typeof m.text !== "string" || !["pending", "accepted", "rejected", "forgotten"].includes(m.status)) {
-      throw new FoxpackError("corrupt_store", "The stored pack has a memory with no id, text or status.");
-    }
-    if (typeof m.confidence !== "number" || !(m.confidence >= 0 && m.confidence <= 1)) {
-      throw new FoxpackError("corrupt_store", `The stored memory ${m.id} has a confidence that is not a number from 0 to 1.`);
-    }
-  }
-  return value as PackData;
+  return checkPack(raw, STORED);
 }
 
 /** A foxpack file is at most this deep: pack, conversations, one, messages, one, and room to spare (E5). */
@@ -268,19 +253,21 @@ export function createPack(options: PackOptions) {
 
     /**
      * Reads a foxpack export back in (E3). Its conversations replace the
-     * ones with the same id. Its memories come in as accepted, except where
-     * this pack has already rejected or forgotten them.
+     * ones with the same id. Its accepted memories come back as pending,
+     * because a file can say anything (E8); a decision this pack made wins.
+     * One bad record and nothing is saved (E7).
      */
     restore(contents: string | Uint8Array): Promise<{ conversations: number; memories: number }> {
       return run(async (d) => {
         const text = typeof contents === "string" ? contents : new TextDecoder().decode(contents);
         checkDepth(text);
-        let file: PackData;
+        let raw: unknown;
         try {
-          file = parsePack(JSON.parse(text));
+          raw = JSON.parse(text);
         } catch (error) {
           throw new FoxpackError("bad_export", `This is not a foxpack export (${error instanceof Error ? error.message : String(error)}).`);
         }
+        const file = checkPack(raw, EXPORTED);
         const next: PackData = { ...d, conversations: [...d.conversations], memories: [...d.memories] };
         const at = new Map(next.conversations.map((c, i) => [c.id, i]));
         for (const c of file.conversations) {
@@ -288,31 +275,15 @@ export function createPack(options: PackOptions) {
           if (i === undefined) next.conversations.push(c);
           else next.conversations[i] = c;
         }
-        const added: MemoryRecord[] = [];
-        for (const m of file.memories.filter((x) => x.status === "accepted")) {
-          const i = next.memories.findIndex((x) => x.id === m.id);
-          if (i >= 0 && next.memories[i]?.status !== "pending") continue;
-          // An export has no originalText (E6): the text it holds is the text the user kept.
-          const record: MemoryRecord = { ...m, originalText: m.text, decidedAt: m.decidedAt ?? now() };
-          delete record.foxmemoryId;
-          added.push(record);
-          if (i >= 0) next.memories[i] = record;
-          else next.memories.push(record);
-        }
-        if (memory) {
-          const done: string[] = [];
-          try {
-            for (const r of added) {
-              r.foxmemoryId = (await memory.remember(r.text, { kind: foxmemoryKind(r.kind), source: r.conversationId ?? `foxpack:${r.source}` })).memory.id;
-              done.push(r.foxmemoryId);
-            }
-          } catch (error) {
-            for (const id of done) await memory.forget(id);
-            throw error;
-          }
+        const known = new Set(next.memories.map((m) => m.id));
+        let added = 0;
+        for (const m of file.memories) {
+          if (m.status !== "accepted" || known.has(m.id)) continue;
+          next.memories.push({ ...m, status: "pending", decidedAt: null });
+          added++;
         }
         await commit(next);
-        return { conversations: file.conversations.length, memories: added.length };
+        return { conversations: file.conversations.length, memories: added };
       });
     },
 
