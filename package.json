@@ -34,16 +34,25 @@
     "check:amo": "node scripts/amo-listing.mjs check",
     "e2e": "node scripts/build-ext.mjs --e2e && node e2e/run.mjs"
   },
+  "dependencies": {
+    "fflate": "^0.8.3"
+  },
+  "peerDependencies": {
+    "foxmemory": "^0.1.4"
+  },
+  "peerDependenciesMeta": {
+    "foxmemory": {
+      "optional": true
+    }
+  },
   "devDependencies": {
     "@types/node": "^24.19.1",
     "create-foxkit": "^0.1.8",
     "esbuild": "^0.28.2",
+    "foxmemory": "^0.1.4",
     "oxlint": "^1.87.0",
     "typescript": "^7.0.2",
     "vitest": "^5.0.3",
     "web-ext": "^10.7.0"
-  },
-  "dependencies": {
-    "fflate": "^0.8.3"
   }
 }
