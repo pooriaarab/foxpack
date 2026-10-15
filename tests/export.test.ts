@@ -84,6 +84,27 @@ describe("export", () => {
     expect(await pack.restore(JSON.stringify({ ...file, memories: [{ ...file.memories[0], note: "[[[[[[[[[[[[[[[[[[[[" }] }))).toMatchObject({ memories: 1 });
   });
 
+  it("E6: an export has no originalText, foxmemoryId or other hidden field", async () => {
+    const memory = createMemory({ store: memoryStore(), embedder: { embed: async (t: string[]) => ({ model: "fixed", vectors: t.map(() => [1]) }) } });
+    const store = inMemoryStore();
+    const pack = createPack({ store, memory, now });
+    await pack.import("claude", fixture("claude-conversations.json"));
+    const [ava] = await pack.memories();
+    await pack.accept(ava?.id ?? "");
+    await pack.edit(ava?.id ?? "", "I have a daughter.");
+    const stored = store.saved as unknown as { conversations: Record<string, unknown>[] };
+    stored.conversations[0] = { ...stored.conversations[0], secret: "hidden" };
+    const text = await pack.export({ format: "foxpack" });
+    const file = JSON.parse(text);
+    expect(Object.keys(file.memories[0]).toSorted()).toEqual(["confidence", "conversationId", "date", "decidedAt", "id", "kind", "seenIn", "source", "status", "text"]);
+    expect(Object.keys(file.conversations[0]).toSorted()).toEqual(["createdAt", "id", "messages", "source", "title", "updatedAt"]);
+    expect(text).not.toContain("hidden");
+    for (const format of ["foxpack", "markdown"] as const) expect(await pack.export({ format, conversations: false })).not.toMatch(/tomatoes|called Ava/);
+    const fresh = createPack({ store: inMemoryStore(), now });
+    await fresh.restore(text);
+    expect((await fresh.memories()).map((m) => [m.text, m.originalText])).toEqual([["I have a daughter.", "I have a daughter."]]);
+  });
+
   it("E4: an unknown format is bad_input and names the formats", () => {
     expect(() => exportPack({ format: "foxpack/v1", conversations: [], memories: [], imports: [] }, { format: "csv" as never })).toThrow(/foxpack, dti, markdown/);
   });

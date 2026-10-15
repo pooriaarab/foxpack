@@ -58,7 +58,9 @@ interface MemoryRecord {
 ```
 
 A `foxpack` export is the same object with `exportedAt`, the accepted
-memories only, and an empty `imports` list. `pack.restore()` reads it back.
+memories only, and an empty `imports` list. An exported memory has no
+`originalText` and no `foxmemoryId`: the text the user edited out stays on
+this computer. `pack.restore()` reads it back.
 
 ### Mapping to DTI
 

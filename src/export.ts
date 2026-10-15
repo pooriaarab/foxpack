@@ -60,6 +60,16 @@ function markdown(data: PackData, memories: MemoryRecord[], withChats: boolean, 
   return `${lines.join("\n")}\n`;
 }
 
+/** An exported memory: no originalText, which can hold text the user edited out, and no foxmemoryId (E6). */
+export type ExportedMemory = Omit<MemoryRecord, "originalText" | "foxmemoryId">;
+
+const exportMemory = (m: MemoryRecord): ExportedMemory => ({ id: m.id, text: m.text, kind: m.kind, confidence: m.confidence, source: m.source, conversationId: m.conversationId, date: m.date, seenIn: m.seenIn, status: m.status, decidedAt: m.decidedAt });
+
+const exportConversation = (c: Conversation): Conversation => ({
+  id: c.id, source: c.source, title: c.title, createdAt: c.createdAt, updatedAt: c.updatedAt,
+  messages: c.messages.map((m) => ({ id: m.id, role: m.role, text: m.text, createdAt: m.createdAt })),
+});
+
 /** Writes a pack in one of the export formats. */
 export function exportPack(data: PackData, options: ExportOptions): string {
   if (!EXPORT_FORMATS.includes(options.format)) throw new FoxpackError("bad_input", `The format must be one of ${EXPORT_FORMATS.join(", ")}.`);
@@ -71,6 +81,6 @@ export function exportPack(data: PackData, options: ExportOptions): string {
     const out = withChats ? data.conversations.map((c) => toDti(c, exportedAt)).filter((c) => c !== null) : [];
     return `${JSON.stringify(out, null, 2)}\n`;
   }
-  const file: PackData & { exportedAt: string } = { format: "foxpack/v1", exportedAt, conversations: withChats ? data.conversations : [], memories, imports: [] };
+  const file = { format: "foxpack/v1", exportedAt, conversations: withChats ? data.conversations.map(exportConversation) : [], memories: memories.map(exportMemory), imports: [] };
   return `${JSON.stringify(file, null, 2)}\n`;
 }
