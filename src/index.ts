@@ -25,4 +25,15 @@ export {
   type PackStore,
   type SearchHit,
 } from "./pack.js";
+export {
+  MEMORY_FIELDS,
+  memoryResolver,
+  type MemorySource,
+  type MemoryValue,
+  type ScentField,
+  type ScentRequest,
+  type ScentResolver,
+  type ScentResponse,
+  type Sensitivity,
+} from "./scent.js";
 export * from "./types.js";
