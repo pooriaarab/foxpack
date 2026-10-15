@@ -56,6 +56,25 @@ describe("foxpack/node", () => {
     await b.save({ format: "foxpack/v1", conversations: [], memories: [], imports: [] });
   });
 
+  it("N4: two packs on one fileStore take turns, also while a slow sink holds the lock", async () => {
+    const store = fileStore(join(dir(), "pack.json"));
+    const slow: { open?: () => void } = {};
+    const sink = { remember: () => new Promise<{ memory: { id: string } }>((r) => (slow.open = () => r({ memory: { id: "f1" } }))), update: async () => undefined, forget: async () => true };
+    const a = createPack({ store, memory: sink });
+    const b = createPack({ store });
+    await a.import("memories", "- Prefers aisle seats.\n- Likes long walks.");
+    const [seats, walks] = await a.memories();
+    const accepting = a.accept(seats?.id ?? "");
+    while (!slow.open) await new Promise((r) => setTimeout(r, 5));
+    let rejected = false;
+    const rejecting = b.reject(walks?.id ?? "").then(() => (rejected = true));
+    await new Promise((r) => setTimeout(r, 200));
+    expect(rejected).toBe(false);
+    slow.open();
+    await Promise.all([accepting, rejecting]);
+    expect((await b.memories()).map((m) => [m.text, m.status])).toEqual([["Prefers aisle seats.", "accepted"], ["Likes long walks.", "rejected"]]);
+  });
+
   it("N3: takes over a lock whose pid is dead, at once", async () => {
     const path = join(dir(), "pack.json");
     writeFileSync(`${path}.lock`, `${spawnSync(process.execPath, ["-e", ""]).pid}\n`);
