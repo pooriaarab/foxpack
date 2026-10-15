@@ -112,7 +112,7 @@ trusts it, and never calls a network API to read it.
 
 | # | Failure mode | Wanted behavior | Test |
 |---|---|---|---|
-| B1 | Another extension or a web page reads memories through `onMessageExternal`. | Only sender id `foxscope@pooriaarab` gets an answer. Any other sender gets nothing: the listener returns `undefined`. | `tests/background.test.ts` |
+| B1 | Another extension or a web page reads memories through `onMessageExternal`. | Only sender id `foxscope@pooriaarab` gets an answer. Any other sender gets nothing: the listener returns `undefined`. | `tests/background.test.ts`, E2E (a stand-in foxscope and a stand-in stranger extension) |
 | B2 | foxscope sends a message that is not `scent.list` or `scent.read`, or `scent.read` with bad fields. | The answer is `undefined` for an unknown type and `{ error }` for bad fields. It never throws in the event page. | `tests/background.test.ts` |
 | B3 | The import page uploads an export to read it. | The page reads the file with `File.arrayBuffer()` and parses it in the page. The manifest has no host permissions, so a request cannot leave. | E2E, manifest review |
 | B4 | A wrong file is dropped (a photo, a zip of something else). | The page shows the error in words and stores nothing. | E2E |

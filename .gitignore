@@ -3,6 +3,5 @@ dist/
 *.tgz
 .DS_Store
 dist-ext/
-dist-e2e/
 web-ext-artifacts/
 source.zip

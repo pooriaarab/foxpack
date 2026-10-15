@@ -1,0 +1,6 @@
+:root { color-scheme: light dark; --accent: oklch(0.6 0.17 45); }
+body { margin: 0 auto; max-width: 720px; padding: 24px 18px; font: 15px/1.55 system-ui, sans-serif; }
+h1 { font-size: 20px; margin: 0 0 8px; }
+h2 { font-size: 14px; margin: 22px 0 6px; color: var(--accent); }
+code, pre { font-family: ui-monospace, Menlo, monospace; font-size: 12.5px; }
+pre { white-space: pre-wrap; overflow-wrap: anywhere; padding: 10px 12px; border: 1px solid color-mix(in oklch, currentColor 15%, transparent); border-radius: 10px; margin: 0; }
