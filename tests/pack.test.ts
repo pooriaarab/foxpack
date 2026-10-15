@@ -9,6 +9,8 @@ const errorCode = (p: Promise<unknown>) => p.then(() => "no error", (e: unknown)
 const embedder = { embed: async (texts: string[]) => ({ model: "fixed-v1", vectors: texts.map(() => [1, 0]) }) };
 const foxmemory = () => createMemory({ store: memoryStore(), embedder });
 
+const bigTurn = (i: number) => ({ uuid: `u${i}`, sender: "human", text: `${"We talked about the garden again. ".repeat(60)}I prefer red tomatoes number ${i}.`, created_at: "2026-03-01T10:00:00Z" });
+
 async function filled(memory?: MemorySink) {
   const store = inMemoryStore();
   const pack = createPack({ store, memory, now: () => new Date("2026-10-15T12:00:00Z") });
@@ -121,6 +123,18 @@ describe("createPack", () => {
     expect(await errorCode(b.accept(sister?.id ?? ""))).toBe("bad_input");
     await Promise.all([a.import("memories", "- Prefers tea."), b.import("memories", "- Prefers jazz.")]);
     expect((await a.memories({ status: "pending" })).map((m) => m.text).toSorted()).toEqual(["Prefers jazz.", "Prefers tea."]);
+  });
+
+  it("K13: a review click on a pack with 20 MB of conversations takes under 2 s", async () => {
+    const chats = Array.from({ length: 200 }, (_, c) => ({ uuid: `c${c}`, name: `Chat ${c}`, created_at: "2026-03-01T10:00:00Z", chat_messages: Array.from({ length: 50 }, (__, i) => bigTurn(c * 50 + i)) }));
+    const store = inMemoryStore();
+    const pack = createPack({ store });
+    await pack.import("claude", JSON.stringify(chats), { maxBytes: 64 * 1024 * 1024 });
+    expect(JSON.stringify(store.saved).length).toBeGreaterThan(20_000_000);
+    const [m] = await pack.memories({ query: "number 7." });
+    const started = performance.now();
+    await pack.accept(m?.id ?? "");
+    expect(performance.now() - started).toBeLessThan(2000);
   });
 
   it("K5: when foxmemory fails, the candidate stays pending", async () => {
