@@ -1,0 +1,74 @@
+import { readFileSync } from "node:fs";
+import { describe, expect, it } from "vitest";
+import { FoxpackError, parseChatGPT } from "../src/index.js";
+
+const fixture = (name: string) => readFileSync(new URL(`./fixtures/${name}`, import.meta.url), "utf8");
+const code = (fn: () => unknown) => {
+  try {
+    fn();
+  } catch (error) {
+    return error instanceof FoxpackError ? error.code : String(error);
+  }
+  return "no error";
+};
+
+const createdAt = (create_time: unknown) =>
+  parseChatGPT([{ conversation_id: "x", current_node: "a", create_time, mapping: { a: { id: "a", parent: null, message: null } } }]).conversations[0]?.createdAt;
+
+describe("parseChatGPT", () => {
+  const parsed = parseChatGPT(fixture("chatgpt-conversations.json"));
+  const [lisbon, sam] = parsed.conversations;
+
+  it("P1: refuses text that is not JSON and JSON of the wrong shape", () => {
+    expect(code(() => parseChatGPT("{nope"))).toBe("bad_export");
+    expect(code(() => parseChatGPT({ mapping: {} }))).toBe("bad_export");
+    expect(code(() => parseChatGPT([{ uuid: "x", chat_messages: [] }]))).toBe("bad_export");
+  });
+
+  it("P2: skips a broken conversation and keeps the others", () => {
+    expect(parsed.conversations.map((c) => c.id)).toEqual(["chatgpt:6795a1b2-0001", "chatgpt:6795a1b2-0002"]);
+    expect(parsed.skipped).toBe(2);
+  });
+
+  it("P3: keeps only the branch that ends at current_node, root first", () => {
+    expect(lisbon?.messages.map((m) => m.id)).toEqual(["n1", "n4", "n5"]);
+    expect(JSON.stringify(lisbon)).not.toContain("OLD BRANCH");
+  });
+
+  it("P3: with no current_node, follows the last child from the root", () => {
+    const mapping = {
+      r: { id: "r", parent: null, children: ["a", "b"], message: null },
+      a: { id: "a", parent: "r", children: [], message: { id: "a", author: { role: "user" }, content: { content_type: "text", parts: ["old"] } } },
+      b: { id: "b", parent: "r", children: [], message: { id: "b", author: { role: "user" }, content: { content_type: "text", parts: ["new"] } } },
+    };
+    expect(parseChatGPT([{ conversation_id: "x", mapping }]).conversations[0]?.messages.map((m) => m.text)).toEqual(["new"]);
+  });
+
+  it("P4: stops at a cycle", () => {
+    expect(sam?.messages.map((m) => m.text)).toEqual(["Call me Sam.", "Sure, Sam."]);
+  });
+
+  it("P5: drops system, hidden, tool and image parts", () => {
+    expect(lisbon?.messages.map((m) => m.role)).toEqual(["user", "assistant", "user"]);
+    expect(lisbon?.messages[2]?.text).toBe("I'm allergic to shellfish, so skip seafood places.");
+    expect(JSON.stringify(parsed)).not.toMatch(/web results|search\(|file-service/);
+  });
+
+  it("P6: turns epoch seconds into ISO and a bad time into null", () => {
+    expect(lisbon?.createdAt).toBe("2026-01-01T00:00:00.123Z");
+    expect(lisbon?.messages[0]?.createdAt).toBe("2026-01-01T00:00:01.000Z");
+    expect(sam?.createdAt).toBeNull();
+    expect(sam?.updatedAt).toBeNull();
+    expect(sam?.title).toBe("Untitled");
+  });
+
+  it("P6: a time before 2001 or not finite becomes null", () => {
+    expect([0, -5, Number.NaN, "1970-01-01T00:00:00Z", 1e15].map(createdAt)).toEqual([null, null, null, null, null]);
+  });
+
+  it("P13: cuts a huge message at 20000 characters", () => {
+    const huge = "a".repeat(30_000);
+    const [c] = parseChatGPT([{ conversation_id: "x", current_node: "a", mapping: { a: { id: "a", parent: null, message: { id: "a", author: { role: "user" }, content: { content_type: "text", parts: [huge] } } } } }]).conversations;
+    expect(c?.messages[0]?.text.length).toBe(20_001);
+  });
+});
