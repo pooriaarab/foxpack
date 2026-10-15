@@ -2,7 +2,7 @@
 // record is rebuilt from the fields foxpack knows, so a field it does not
 // know never reaches the store, an export or a save.
 import { FoxpackError, type FoxpackErrorCode } from "./errors.js";
-import { MEMORY_KINDS, SOURCES, type Conversation, type ImportRecord, type MemoryRecord, type MemoryStatus, type Message, type PackData } from "./types.js";
+import { MAX_MEMORY_TEXT, MEMORY_KINDS, SOURCES, type Conversation, type ImportRecord, type MemoryRecord, type MemoryStatus, type Message, type PackData } from "./types.js";
 
 const STATUSES: readonly MemoryStatus[] = ["pending", "accepted", "rejected", "forgotten"];
 type Raw = Record<string, unknown>;
@@ -55,7 +55,12 @@ export function checkPack(raw: unknown, k: Checker): PackData {
     if (memoryIds.has(id)) fail(`has two memories with the id ${id}.`);
     memoryIds.add(id);
     if (typeof m.confidence !== "number" || !(m.confidence >= 0 && m.confidence <= 1)) fail(`has ${name} a confidence that is not a number from 0 to 1.`);
-    const text = str(m.text, `${name} a text`);
+    let text = str(m.text, `${name} a text`);
+    if (k.exported) {
+      // A restored memory can be accepted, so it meets the rule of edit (E9).
+      text = text.trim();
+      if (!text || text.length > MAX_MEMORY_TEXT) fail(`has ${name} a text that is not 1 to ${MAX_MEMORY_TEXT} characters.`);
+    }
     const record: MemoryRecord = {
       id,
       text,
