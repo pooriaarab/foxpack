@@ -257,9 +257,8 @@ export function createPack(options: PackOptions) {
       return change(id, async (m) => {
         if (m.foxmemoryId && memory) await memory.forget(m.foxmemoryId);
         delete m.foxmemoryId;
-        const texts = [m.text, m.originalText];
         Object.assign(m, { status: "forgotten", text: "", originalText: "", conversationId: null });
-        return (d) => ({ ...d, conversations: redact(d.conversations, new Set([m.id]), texts) });
+        return (d) => ({ ...d, conversations: redact(d.conversations, new Set([m.id])) });
       });
     },
 
