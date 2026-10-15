@@ -41,16 +41,22 @@ export interface ReadNotice {
 
 type Sender = { id?: string } | undefined;
 
+/** The error Firefox gives a sendMessage to an add-on id that is not installed. */
+export const NOT_INSTALLED = "Could not establish connection. Receiving end does not exist.";
+
 /**
  * The runtime.onMessageExternal listener. It answers `scent.list` and
- * `scent.read` for foxscope only. For any other sender, and any other
- * message, it returns undefined, which sends no answer at all (B1, B2).
- * Each read is noted in storage, so the popup can show it.
+ * `scent.read` for foxscope only. Any other sender gets the error of an
+ * add-on that is not installed, so it cannot tell that foxpack is (B1):
+ * an undefined answer would resolve its call. For any other message from
+ * foxscope it returns undefined (B2). Each read is noted in storage, so
+ * the popup can show it.
  */
 export function scentListener(area: StorageArea, now: () => Date = () => new Date()) {
   const resolver = memoryResolver({ memories: async (f) => filterMemories(parsePack(await storageStore(area).load()), f) });
   return (message: unknown, sender: Sender): Promise<unknown> | undefined => {
-    if (sender?.id !== FOXSCOPE_ID || typeof message !== "object" || message === null) return undefined;
+    if (sender?.id !== FOXSCOPE_ID) return Promise.reject(new Error(NOT_INSTALLED));
+    if (typeof message !== "object" || message === null) return undefined;
     const m = message as { type?: unknown; fields?: unknown; derive?: unknown };
     if (m.type === "scent.list") return resolver.list();
     if (m.type !== "scent.read") return undefined;
