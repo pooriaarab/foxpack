@@ -86,6 +86,9 @@ export function parsePack(raw: unknown): PackData {
     if (typeof m?.id !== "string" || typeof m.text !== "string" || !["pending", "accepted", "rejected", "forgotten"].includes(m.status)) {
       throw new FoxpackError("corrupt_store", "The stored pack has a memory with no id, text or status.");
     }
+    if (typeof m.confidence !== "number" || !(m.confidence >= 0 && m.confidence <= 1)) {
+      throw new FoxpackError("corrupt_store", `The stored memory ${m.id} has a confidence that is not a number from 0 to 1.`);
+    }
   }
   return value as PackData;
 }
