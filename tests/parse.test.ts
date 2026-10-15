@@ -1,6 +1,6 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-import { FoxpackError, parseChatGPT, parseClaude } from "../src/index.js";
+import { FoxpackError, htmlToText, parseChatGPT, parseClaude, parseGemini, parseSavedMemories } from "../src/index.js";
 
 const fixture = (name: string) => readFileSync(new URL(`./fixtures/${name}`, import.meta.url), "utf8");
 const code = (fn: () => unknown) => {
@@ -105,5 +105,60 @@ describe("parseClaude", () => {
     expect(garden?.messages[2]?.createdAt).toBe("2026-02-01T10:01:00.000Z");
     expect(empty?.createdAt).toBeNull();
     expect(empty?.title).toBe("Untitled");
+  });
+});
+
+describe("parseGemini", () => {
+  const parsed = parseGemini(fixture("gemini-MyActivity.json"));
+  const [color, nurse] = parsed.conversations;
+
+  it("P1: refuses the wrong shape and the HTML version of My Activity", () => {
+    expect(code(() => parseGemini("<html><body>My Activity</body></html>"))).toBe("bad_export");
+    expect(code(() => parseGemini({ title: "x" }))).toBe("bad_export");
+    expect(code(() => parseGemini(fixture("claude-conversations.json")))).toBe("bad_export");
+  });
+
+  it("P9: keeps Gemini Apps and Bard prompts, and skips other products and actions", () => {
+    expect(parsed.conversations).toHaveLength(2);
+    expect(parsed.skipped).toBe(3);
+    expect(JSON.stringify(parsed)).not.toMatch(/flights|Canvas|Used Gemini/);
+  });
+
+  it("P10: turns the HTML answer into plain text", () => {
+    expect(nurse?.messages[1]?.text).toBe("Try light meals & protein.\n- Greek yogurt\n- Nuts \u2014 a handful");
+    expect(htmlToText("a<br/>b &lt;i&gt; &#x41; &bogus; &#0;")).toBe("a\nb <i> A &bogus; &#0;");
+  });
+
+  it("P11: groups entries by their chat link, else one entry is one conversation", () => {
+    expect(nurse?.id).toBe("gemini:1a2b3c4d5e");
+    expect(nurse?.messages.map((m) => m.role)).toEqual(["user", "assistant", "user"]);
+    expect(nurse?.messages[2]?.text).toBe("And something with no sugar?");
+    expect(color?.id).toMatch(/^gemini:2025-12-24T10:00:00.000Z-\d+$/);
+    expect(color?.title).toBe("My favorite color is green.");
+    expect(color?.createdAt).toBe("2025-12-24T10:00:00.000Z");
+  });
+});
+
+describe("parseSavedMemories", () => {
+  it("P12: one memory per line, with bullets, headings, blanks and repeats removed", () => {
+    const parsed = parseSavedMemories(fixture("saved-memories.txt"));
+    expect(parsed.savedMemories.map((m) => m.text)).toEqual([
+      "Prefers concise answers with code first.",
+      "Is vegetarian.",
+      "Has a dog named Miso.",
+      "Is building a budgeting app called Penny.",
+      "Lives in Vancouver.",
+      "Works as a nurse on night shifts.",
+    ]);
+    expect(parsed.skipped).toBe(2);
+    expect(parsed.savedMemories[0]).toEqual({ text: "Prefers concise answers with code first.", conversationId: null, date: null });
+  });
+
+  it("P12: removes a BOM and Windows line ends", () => {
+    expect(parseSavedMemories("\uFEFFLikes hiking.\r\nIs tall.\r\n").savedMemories.map((m) => m.text)).toEqual(["Likes hiking.", "Is tall."]);
+  });
+
+  it("P13: skips a line longer than 500 characters", () => {
+    expect(parseSavedMemories(`${"x".repeat(501)}\nShort one.`).savedMemories.map((m) => m.text)).toEqual(["Short one."]);
   });
 });
