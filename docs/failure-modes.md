@@ -24,8 +24,11 @@ trusts it, and never calls a network API to read it.
 | P10 | A Gemini answer is HTML that holds a script, a link or entities. | The answer becomes plain text: tags removed, entities decoded. No HTML reaches the store. | `tests/parse.test.ts` |
 | P11 | Gemini Takeout has no conversation ids, so every prompt is a separate entry. | Entries with the same chat link (`gemini.google.com/app/<id>` in `titleUrl` or `details`) form one conversation. An entry with no link is a conversation of its own. This limit is in `docs/format.md` and the README. | `tests/parse.test.ts` |
 | P12 | A pasted memory list has bullets (`-`, `*`, `•`, `1.`), blank lines, headings, a BOM or Windows line ends. | Each non-empty line is one memory, with its bullet and spaces removed. A line that starts with `#` or ends in `:` is a heading and is skipped. | `tests/parse.test.ts` |
+| P16 | ChatGPT exports have no list of saved memories, so the memories are lost. | Each write to the `bio` memory tool, on any branch, becomes a saved memory with its conversation and date. It is a history of writes: a memory the user deleted later can be in it. | `tests/parse.test.ts` |
+| P17 | ChatGPT custom instructions ("about you") repeat in every conversation and give one candidate per conversation. | Each distinct text becomes one user message in a `Custom instructions` conversation. | `tests/parse.test.ts` |
+| P18 | Claude `memories.json` is Markdown prose with bold headings, not a list. | Headings are skipped, and a paragraph is split into sentences. | `tests/parse.test.ts` |
 | P15 | The Takeout file is `MyActivity.html`, the Takeout default. | `parseGemini` throws `bad_export` and says to choose JSON for My Activity in Takeout. | `tests/parse.test.ts` |
-| P13 | A text is huge (a pasted book in one message). | A message is cut at 20000 characters. A memory line longer than 500 characters is skipped. | `tests/parse.test.ts` |
+| P13 | A text is huge (a pasted book in one message). | A message is cut at 20000 characters. A memory line longer than 200 characters is split into sentences, and a sentence longer than 500 characters is skipped. | `tests/parse.test.ts` |
 | P14 | Two imports of the same file make two copies of every conversation. | A conversation id is `<source>:<id in the export>`. A second import replaces the conversation, it does not add one. | `tests/pack.test.ts` |
 
 ## Zip files and size (`readExport`)
