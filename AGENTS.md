@@ -72,7 +72,7 @@ src/read.ts       readExport: zip or JSON in, the right parser, the size cap
 src/extract.ts    extractMemories: the sentence patterns
 src/pack.ts       createPack: the store and the review flow
 src/check.ts      checkPack: every record of a stored pack or a restore file
-src/node.ts       foxpack/node: the pack file, and the entry Node gets for "@pooriaarab/foxpack"
+src/node.ts       foxpack/node: the pack file, and the entry Node gets for "foxpack-ai"
 src/cli.ts, src/mcp.ts  the foxpack command and the read-only MCP server
 docs/format.md    the foxpack/v1 format, the DTI mapping, what is known about each export
 scripts/build-ext.mjs  bundles extension/ into dist-ext/
